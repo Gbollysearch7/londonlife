@@ -22,14 +22,14 @@ const PREFERRED: Record<string, [number, number, number]> = {
   camp_hob: [4, 0, 0],
   cooker: [4, 0, 0],
   fridge: [5, 0, 0],
-  storage_chest: [0, 2, 0],
+  storage_chest: [5, 2, 0],
   guitar: [0, 3, 0],
   sofa: [2, 3, 0],
   rug: [2, 3, 0],
   tv: [2, 5, 180],
-  lamp: [0, 5, 0],
-  shower: [5, 5, 0],
-  toilet: [4, 5, 0],
+  lamp: [5, 3, 0],
+  shower: [0, 5, 0],
+  toilet: [0, 4, 90],
 };
 
 /** Lays out a starter home: preferred authored spots first, then the first free valid cell. */

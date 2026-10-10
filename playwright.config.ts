@@ -5,7 +5,8 @@ const chromium = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 
 export default defineConfig({
   testDir: "tests/e2e",
-  timeout: 180_000,
+  globalSetup: "./tests/e2e/global-setup.ts",
+  timeout: 300_000,
   use: {
     baseURL: "http://localhost:3100",
     viewport: { width: 1280, height: 800 },

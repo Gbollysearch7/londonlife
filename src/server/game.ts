@@ -685,22 +685,22 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
 
   const running = ctx.running
     ? {
-        id: ctx.running.id,
-        defId: ctx.running.def_id,
+        id: String(ctx.running.id),
+        defId: String(ctx.running.def_id),
         label: activityDef(ctx.running.def_id as string)!.label,
-        startedAt: ctx.running.started_at,
-        endsAt: ctx.running.ends_at,
+        startedAt: (ctx.running.started_at as Date).toISOString(),
+        endsAt: (ctx.running.ends_at as Date).toISOString(),
         cancelRule: activityDef(ctx.running.def_id as string)!.cancelRule,
         anchor: activityDef(ctx.running.def_id as string)!.anchor ?? null,
       }
     : null;
   const journey = ctx.journey
     ? {
-        origin: ctx.journey.origin,
-        destination: ctx.journey.destination,
-        mode: ctx.journey.mode,
-        departedAt: ctx.journey.departed_at,
-        arrivesAt: ctx.journey.arrives_at,
+        origin: ctx.journey.origin as LocationId,
+        destination: ctx.journey.destination as LocationId,
+        mode: ctx.journey.mode as TravelMode,
+        departedAt: (ctx.journey.departed_at as Date).toISOString(),
+        arrivesAt: (ctx.journey.arrives_at as Date).toISOString(),
         farePence: Number(ctx.journey.fare_pence),
       }
     : null;
