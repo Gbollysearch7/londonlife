@@ -11,6 +11,7 @@ const swap = {
   name: "test-build-swaps",
   setup(b) {
     b.onResolve({ filter: /^@\/client\/api$/ }, () => ({ path: r("src/demo/api.ts") }));
+    b.onResolve({ filter: /^\.\/api$/ }, (a) => (a.importer.includes(`${path.sep}src${path.sep}client${path.sep}`) ? { path: r("src/demo/api.ts") } : undefined));
     b.onResolve({ filter: /^\.\/db$/ }, (a) => (a.importer.includes(`${path.sep}src${path.sep}server${path.sep}`) ? { path: r("src/demo/db.ts") } : undefined));
     b.onResolve({ filter: /^node:crypto$/ }, () => ({ path: r("src/demo/cryptoShim.ts") }));
     b.onResolve({ filter: /^next\/dynamic$/ }, () => ({ path: r("src/demo/nextDynamicShim.tsx") }));
@@ -29,7 +30,9 @@ const result = await build({
   format: "esm",
   platform: "browser",
   target: "es2022",
-  minify: true,
+  minifySyntax: true,
+  minifyWhitespace: true,
+  minifyIdentifiers: false,
   write: false,
   outdir: out,
   jsx: "automatic",
@@ -55,8 +58,9 @@ fs.writeFileSync(
 <script type="module">${js}</script>
 `,
 );
-for (const f of ["pglite.wasm", "initdb.wasm", "pglite.data"]) {
-  fs.copyFileSync(r(`node_modules/@electric-sql/pglite/dist/${f}`), path.join(out, f));
+// The engine's filesystem bundle ships under a .wasm name because artifacts only serve known web file types.
+for (const [src, dest] of [["pglite.wasm", "pglite.wasm"], ["initdb.wasm", "initdb.wasm"], ["pglite.data", "pglite-fs.wasm"]]) {
+  fs.copyFileSync(r(`node_modules/@electric-sql/pglite/dist/${src}`), path.join(out, dest));
 }
 const kb = (f) => `${Math.round(fs.statSync(path.join(out, f)).size / 1024)} KB`;
-console.log("index.html", kb("index.html"), "| pglite.wasm", kb("pglite.wasm"), "| pglite.data", kb("pglite.data"));
+console.log("index.html", kb("index.html"), "| pglite.wasm", kb("pglite.wasm"), "| pglite-fs.wasm", kb("pglite-fs.wasm"));

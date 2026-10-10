@@ -43,7 +43,7 @@ export async function bootDatabase(onProgress: (msg: string) => void) {
   const [wasm, initdb, data] = await Promise.all([
     asset("pglite.wasm").then((r) => r.arrayBuffer()).then((b) => WebAssembly.compile(b)),
     asset("initdb.wasm").then((r) => r.arrayBuffer()).then((b) => WebAssembly.compile(b)),
-    asset("pglite.data").then((r) => r.blob()),
+    asset("pglite-fs.wasm").then((r) => r.blob()),
   ]);
   onProgress("Opening your save…");
   let saved: Blob | undefined;
