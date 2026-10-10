@@ -9,7 +9,8 @@
     "lint": "tsc --noEmit",
     "db:migrate": "tsx scripts/migrate.ts",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:test": "node scripts/build-test.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
@@ -22,12 +23,14 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@playwright/test": "^1.64.0",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.180.0",
+    "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
     "typescript": "5.9",
     "vitest": "^5.0.3"

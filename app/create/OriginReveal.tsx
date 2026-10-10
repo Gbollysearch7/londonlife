@@ -4,7 +4,7 @@ import { fetchState, type State } from "@/client/api";
 import { furnitureDef } from "@/content/catalogue";
 import styles from "./create.module.css";
 
-export default function OriginReveal() {
+export default function OriginReveal({ onEnter }: { onEnter?: () => void } = {}) {
   const [s, setS] = useState<State | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -63,9 +63,15 @@ export default function OriginReveal() {
           </p>
         )}
         <p className="tiny">Rent and bills start in a later update. For now, your first weeks are covered.</p>
-        <a className="btn block" href="/play">
-          Enter London
-        </a>
+        {onEnter ? (
+          <button className="btn block" onClick={onEnter}>
+            Enter London
+          </button>
+        ) : (
+          <a className="btn block" href="/play">
+            Enter London
+          </a>
+        )}
       </div>
     </main>
   );

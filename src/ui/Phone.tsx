@@ -363,6 +363,27 @@ function Help() {
 
 function Settings() {
   const [busy, setBusy] = useState(false);
+  const [ask, setAsk] = useState(false);
+  if (process.env.LL_TEST_BUILD_TIME_SCALE)
+    return (
+      <div className={styles.help}>
+        <p className="tiny">This is the test build. Progress is saved in this browser only and timers run ×{process.env.LL_TEST_BUILD_TIME_SCALE}.</p>
+        {ask ? (
+          <div className={styles.quotes}>
+            <button className="btn danger" disabled={busy} onClick={async () => (setBusy(true), await postJson("/api/auth/signout", {}))}>
+              Delete my save and start over
+            </button>
+            <button className="btn secondary" onClick={() => setAsk(false)}>
+              Keep playing
+            </button>
+          </div>
+        ) : (
+          <button className="btn secondary" onClick={() => setAsk(true)}>
+            Start over
+          </button>
+        )}
+      </div>
+    );
   return (
     <div className={styles.help}>
       <p className="tiny">Sound, notifications and privacy settings arrive with those features. Your progress saves automatically after every action.</p>

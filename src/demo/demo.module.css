@@ -1,0 +1,9 @@
+.boot { min-height: 100%; display: grid; place-items: center; padding: 24px 16px; position: relative; overflow: hidden; background: #2b3a4f; }
+.bootArt { position: absolute; inset: 0; background: linear-gradient(180deg, #2b3a4f 0%, #a86f5c 62%, #e7b07a 100%); }
+.bootArt svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bootCard { position: relative; background: var(--paper); border-radius: 18px; padding: 28px; max-width: 460px; width: 100%; box-shadow: var(--shadow); display: grid; gap: 12px; justify-items: start; }
+.bootCard h1 { font-size: 36px; }
+.bootCard p { margin: 0; }
+.notes { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--ink-2); font-size: 14px; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+.check input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--green); flex: none; }

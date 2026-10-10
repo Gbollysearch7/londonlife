@@ -1,4 +1,4 @@
-import { Pool, type PoolClient } from "pg";
+import { Pool } from "pg";
 
 const globalForPool = globalThis as unknown as { __llPool?: Pool };
 
@@ -12,7 +12,10 @@ export function pool(): Pool {
   return globalForPool.__llPool;
 }
 
-export type Tx = PoolClient;
+/** The only database surface the game rules use, so the same rules can also run on PGlite in the test build. */
+export interface Tx {
+  query(sql: string, params?: unknown[]): Promise<{ rows: any[]; rowCount: number | null }>; // eslint-disable-line @typescript-eslint/no-explicit-any
+}
 
 export async function withTx<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
   const client = await pool().connect();

@@ -29,7 +29,7 @@ const LABELS: Record<keyof typeof APPEARANCE_OPTIONS, string> = {
   shoes: "Shoes",
 };
 
-export default function CreateWizard() {
+export default function CreateWizard({ onCreated }: { onCreated?: () => void } = {}) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [appearance, setAppearance] = useState<Appearance>({ body: 0, skin: 2, hairStyle: 1, hairColour: 0, top: 0, bottom: 0, shoes: 0 });
@@ -51,7 +51,8 @@ export default function CreateWizard() {
     setError(null);
     try {
       await sendCommand("CreateCharacter", { name: name.trim(), appearance, traits, ambition });
-      window.location.href = "/create";
+      if (onCreated) onCreated();
+      else window.location.href = "/create";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't create your character.");
       setBusy(false);

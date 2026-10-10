@@ -26,6 +26,9 @@ export function londonHour(at: Date): number {
  * Ignored in production so a demo setting can never ship.
  */
 export function timeScale(): number {
+  // The standalone test build sets this explicitly at build time and labels it in the UI.
+  const testBuild = Number(process.env.LL_TEST_BUILD_TIME_SCALE ?? "");
+  if (testBuild >= 1) return testBuild;
   if (process.env.NODE_ENV === "production") return 1;
   const v = Number(process.env.LL_TIME_SCALE ?? "1");
   return Number.isFinite(v) && v >= 1 ? v : 1;
