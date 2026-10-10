@@ -1055,3 +1055,15 @@ Notation: size is the visible placement footprint; wall and yard are distinct pl
 ### 40.4 Further play-study checklist
 
 Next source sessions should target: one full work shift and promotion; one paid class through quiz and retry; appliance interactions across all functional categories; one vehicle test/service journey; one affordable running business after purchase; shop order with controlled consenting test accounts; contract/visit consent with controlled accounts; all five game tutorial/legal move variants; insurance renewal and an eligible hazard; account-age civic flow. Do not disturb unrelated real players merely to verify a feature. Append findings to the relevant chapter and revise defaults where evidence warrants.
+
+---
+
+## Decision log
+
+| Date | Decision | Affected chapters | Status |
+|---|---|---|---|
+| 2026-10-10 | Audience is adults only (18+). Account creation requires an age confirmation; all characters are adults. | 5, 19, 32, 39 | Adopted (owner) |
+| 2026-10-10 | Casino, sports predictions and fictional-currency stakes stay out of scope for now; all table games are friendly. Venue 36 is not built. | 22, 23, 30, 39 | Adopted (owner) |
+| 2026-10-10 | Working title remains "London Life". | 39 | Provisional |
+| 2026-10-10 | Stack default: Next.js + React, Three.js via react-three-fiber, Postgres (local in development, hosted provider such as Supabase later). | 35 | Provisional, pending owner confirmation |
+| 2026-10-10 | Differentiators proposed: flatmates, the flat hunt, commuting as gameplay, local-regular status, London calendar events, photo mode tied to careers, Claude-powered named NPC conversations, allotment and fictional blue plaques. Early picks: flatmates, commuting, local regular, photo mode. | new | Proposed, pending owner confirmation |
