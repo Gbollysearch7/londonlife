@@ -53,8 +53,9 @@ const result = await build({
 
 const js = result.outputFiles.find((f) => f.path.endsWith(".js")).text.replace(/<\/script/gi, "<\\/script");
 const css = result.outputFiles.find((f) => f.path.endsWith(".css"))?.text ?? "";
-fs.rmSync(out, { recursive: true, force: true });
-fs.mkdirSync(out);
+// Empty the folder in place (keeps any local static server pointed at it working).
+fs.mkdirSync(out, { recursive: true });
+for (const f of fs.readdirSync(out)) fs.rmSync(path.join(out, f), { recursive: true, force: true });
 fs.writeFileSync(
   path.join(out, "index.html"),
   `<title>London Life</title>
