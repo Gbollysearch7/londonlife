@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { fetchState, sendCommand, ApiError, type State } from "./api";
 
 export type SheetId = "actions" | "map" | "buy" | "phone" | "needs" | null;
-export type PhoneApp = "home" | "missions" | "bank" | "skills" | "profile" | "inventory" | "tour";
+export type PhoneApp = "home" | "jobs" | "missions" | "bank" | "skills" | "profile" | "inventory" | "tour";
 
 export interface Placement {
   instanceId: string;

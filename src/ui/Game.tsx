@@ -6,6 +6,7 @@ import type { State } from "@/client/api";
 import { Dock, NeedsBar, ProgressStrip, Toasts, TopBar, Warnings } from "./Hud";
 import { ActionsSheet, BuySheet, MapSheet, NeedsSheet, PlacementBar } from "./Sheets";
 import { PhoneSheet } from "./Phone";
+import { ShiftPanel } from "./ShiftPanel";
 import styles from "./ui.module.css";
 
 const World = dynamic(() => import("@/world/World"), { ssr: false });
@@ -30,7 +31,7 @@ function NextStep({ s }: { s: State }) {
   const setSheet = useGame((x) => x.setSheet);
   const setPhoneApp = useGame((x) => x.setPhoneApp);
   const [hidden, setHidden] = useState(false);
-  const next = s.tutorial.find((t) => !t.done && !("locked" in t && t.locked));
+  const next = s.tutorial.find((t) => !t.done);
   if (!next || hidden) return null;
   return (
     <div className={styles.next}>
@@ -103,7 +104,7 @@ export default function Game() {
       </div>
       <NeedsBar s={state} />
       <div className={styles.bottomCentre}>
-        {placement ? <PlacementBar s={state} /> : <ProgressStrip s={state} />}
+        {placement ? <PlacementBar s={state} /> : state.shift ? <ShiftPanel s={state} shift={state.shift} /> : <ProgressStrip s={state} />}
         <Dock s={state} />
       </div>
       <Toasts />

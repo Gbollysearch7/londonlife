@@ -35,6 +35,17 @@ export const VENUES: VenueDef[] = [
     npcs: [{ id: "bev", name: "Bev", role: "Centre coordinator (NPC)" }],
     street: { x: 16 },
   },
+  {
+    id: "city_office",
+    name: "The City Office",
+    district: "City",
+    kind: "venue",
+    blurb: "A glass office tower with a fintech start-up upstairs and a bank branch on the ground floor. Workplace for Technology, Banking and Product careers.",
+    opening: "Weekdays",
+    access: "Staff entrance",
+    npcs: [{ id: "priya", name: "Priya", role: "Office manager (NPC)" }],
+    street: { x: 34 },
+  },
 ];
 
 export const venue = (id: string) => VENUES.find((v) => v.id === id);
@@ -44,16 +55,25 @@ const WALK: Record<string, number> = {
   "home|food_hall": 6,
   "home|common_room": 8,
   "food_hall|common_room": 4,
+  "home|city_office": 35,
+  "food_hall|city_office": 30,
+  "common_room|city_office": 28,
 };
 
 export const TRAVEL_MODES = {
   walk: { name: "Walk", farePence: 0, speed: 1, minMinutes: 1 },
   bus: { name: "Bus", farePence: 200, speed: 0.4, minMinutes: 2 },
+  tube: { name: "Tube", farePence: 280, speed: 0.3, minMinutes: 4 },
 } as const;
 export type TravelMode = keyof typeof TRAVEL_MODES;
 
 export function walkMinutes(a: LocationId, b: LocationId): number {
   return WALK[`${a}|${b}`] ?? WALK[`${b}|${a}`] ?? 0;
+}
+
+/** The Tube only serves trips between districts; short hops are walk or bus. */
+export function modesFor(a: LocationId, b: LocationId): TravelMode[] {
+  return walkMinutes(a, b) >= 20 ? ["walk", "bus", "tube"] : ["walk", "bus"];
 }
 
 export function journeyQuote(a: LocationId, b: LocationId, mode: TravelMode) {
@@ -128,6 +148,9 @@ export const ACTIVITIES: ActivityDef[] = [
   { id: "coding_club", label: "Coding club", description: "Free session on the centre's computers.", location: "common_room", minutes: 10, costPence: 0, needs: { energy: -4, social: 4 }, xp: { skill: "coding", amount: 20 }, cancelRule: NO_REFUND, event: "practised", eventData: { skill: "coding" }, anchor: "computers" },
   { id: "public_shower", label: "Use the centre shower", description: "Free shower for anyone who needs it.", location: "common_room", minutes: 3, costPence: 0, needs: { hygiene: 40 }, cancelRule: NO_REFUND, event: "washed" },
   { id: "common_room_toilet", label: "Use the toilets", description: "", location: "common_room", minutes: 1, costPence: 0, needs: { bladder: 65 }, cancelRule: NO_REFUND, event: "toilet" },
+  { id: "office_coffee", label: "Coffee in the break kitchen", description: "Free filter coffee for staff.", location: "city_office", minutes: 2, costPence: 0, needs: { energy: 8, bladder: -6 }, cooldownMin: 45, cancelRule: NO_REFUND, event: "relaxed", anchor: "kitchen" },
+  { id: "chat_priya", label: "Chat with Priya", description: "Priya is an NPC: a named local character, not another player.", location: "city_office", minutes: 2, costPence: 0, needs: { social: 12 }, xp: { skill: "charisma", amount: 4 }, cooldownMin: 30, cancelRule: NO_REFUND, event: "npc_chat", eventData: { npc: "priya" }, npc: "priya", anchor: "reception" },
+  { id: "office_toilet", label: "Use the toilets", description: "", location: "city_office", minutes: 1, costPence: 0, needs: { bladder: 65 }, cancelRule: NO_REFUND, event: "toilet" },
   { id: "rest_sofa", label: "Rest on the old sofa", description: "Free, if a little lumpy.", location: "common_room", minutes: 10, costPence: 0, needs: { energy: 18 }, cancelRule: NO_REFUND, event: "napped" },
 ];
 
@@ -149,6 +172,7 @@ export const MISSIONS: MissionDef[] = [
   { id: "buy_furniture", pool: "Enterprise", title: "Buy a piece of furniture", event: "furniture_bought", target: 1, reward: { pence: 1000, rep: 50 } },
   { id: "paid_task", pool: "Enterprise", title: "Complete a paid task", event: "side_task_paid", target: 1, reward: { pence: 500, rep: 25 } },
   { id: "practise", pool: "Enterprise", title: "Practise a skill", event: "practised", target: 1, reward: { pence: 400, rep: 20 } },
+  { id: "work_shift", pool: "Enterprise", title: "Complete a work shift", event: "shift_completed", target: 1, reward: { pence: 800, rep: 40 } },
 ];
 
 export const missionDef = (id: string) => MISSIONS.find((m) => m.id === id);

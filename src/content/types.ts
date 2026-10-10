@@ -15,7 +15,7 @@ export const SKILL_IDS = [
 ] as const;
 export type SkillId = (typeof SKILL_IDS)[number];
 
-export type LocationId = "home" | "food_hall" | "common_room";
+export type LocationId = "home" | "food_hall" | "common_room" | "city_office";
 
 export interface TraitDef {
   id: string;
@@ -148,4 +148,35 @@ export interface MissionDef {
   match?: Record<string, string>;
   target: number;
   reward: { pence: number; rep: number; stars?: number };
+}
+
+export interface RankDef {
+  title: string;
+  /** Extra requirement to be promoted into this rank. */
+  gate?: { skill: SkillId; level: number };
+}
+
+export interface CareerDef {
+  id: string;
+  name: string;
+  blurb: string;
+  workplace: LocationId;
+  skill: SkillId;
+  /** Entry requirement: any one of these skill levels. */
+  entry?: { skill: SkillId; level: number }[];
+  /** Pay multiplier against the base rank table. */
+  multiplier: number;
+  ranks: [RankDef, RankDef, RankDef, RankDef, RankDef];
+  /** ISO weekdays (1 = Monday … 7 = Sunday) when shifts can start. */
+  workdays: number[];
+  /** London-time hours within which a shift may start: [from, to). */
+  window: [number, number];
+  tasks: string;
+}
+
+export interface WorkTaskDef {
+  id: string;
+  prompt: string;
+  /** Exactly three options; outcome is fixed per option. */
+  options: { text: string; outcome: "success" | "ok" | "fail" }[];
 }

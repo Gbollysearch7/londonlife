@@ -189,6 +189,85 @@ function CommonRoom({ light }: { light: Lighting }) {
   );
 }
 
+const PRIYA: Appearance = { body: 1, skin: 3, hairStyle: 4, hairColour: 0, top: 2, bottom: 0, shoes: 1 };
+const COLLEAGUES: Appearance[] = [
+  { body: 0, skin: 1, hairStyle: 0, hairColour: 1, top: 5, bottom: 1, shoes: 1 },
+  { body: 1, skin: 5, hairStyle: 2, hairColour: 0, top: 3, bottom: 0, shoes: 0 },
+];
+
+function Desk({ p, rot = 0 }: { p: [number, number, number]; rot?: number }) {
+  return (
+    <group position={p} rotation={[0, rot, 0]}>
+      <B p={[0, 0.74, 0]} s={[1.6, 0.05, 0.8]} c="#e9e4da" r={0.5} />
+      {[-0.72, 0.72].map((x) => (
+        <B key={x} p={[x, 0.37, 0]} s={[0.05, 0.74, 0.7]} c="#46505b" />
+      ))}
+      <B p={[0, 1.02, -0.25]} s={[0.6, 0.36, 0.04]} c="#17232b" r={0.3} />
+      <mesh position={[0, 1.02, -0.227]}>
+        <planeGeometry args={[0.54, 0.3]} />
+        <meshStandardMaterial color="#2b4f66" emissive="#3a6a8a" emissiveIntensity={0.5} />
+      </mesh>
+      <B p={[0, 0.8, -0.25]} s={[0.06, 0.12, 0.06]} c="#46505b" />
+      <B p={[0, 0.45, 0.55]} s={[0.5, 0.06, 0.5]} c="#234C42" />
+      <B p={[0, 0.72, 0.78]} s={[0.5, 0.5, 0.06]} c="#234C42" />
+    </group>
+  );
+}
+
+function CityOffice({ light }: { light: Lighting }) {
+  return (
+    <group>
+      <Floor w={12} d={9} c1="#cfd3d6" c2="#c3c8cc" />
+      {/* window wall with distant towers */}
+      <group position={[0, 0, -4.6]}>
+        <mesh position={[0, 1.7, 0]}>
+          <planeGeometry args={[12, 3.4]} />
+          <meshStandardMaterial color={light.window} emissive={light.window} emissiveIntensity={light.night ? 0.15 : 0.45} />
+        </mesh>
+        {[-4.5, -2.6, -0.4, 1.8, 3.9].map((x, i) => (
+          <mesh key={x} position={[x, 0.9 + (i % 3) * 0.35, 0.02]}>
+            <planeGeometry args={[1.1, 1.8 + (i % 3) * 0.7]} />
+            <meshBasicMaterial color={light.night ? "#162033" : "#9aa8b8"} />
+          </mesh>
+        ))}
+        {Array.from({ length: 7 }, (_, i) => (
+          <B key={i} p={[-6 + i * 2, 1.7, 0.05]} s={[0.08, 3.4, 0.1]} c="#2b2f36" />
+        ))}
+      </group>
+      <B p={[-6.1, 1.7, 0]} s={[0.2, 3.4, 9.2]} c="#e6e8ea" />
+      {/* reception */}
+      <group position={[-4.2, 0, 2.6]}>
+        <B p={[0, 0.55, 0]} s={[1.8, 1.1, 0.7]} c="#2F4A6B" />
+        <B p={[0, 1.13, 0]} s={[1.9, 0.06, 0.8]} c="#e9e4da" r={0.4} />
+      </group>
+      {/* desks */}
+      {[-2, 0.4, 2.8].flatMap((x) => [-2.2, -0.2].map((z) => <Desk key={`${x}${z}`} p={[x, 0, z]} />))}
+      {/* meeting pod */}
+      <group position={[4.8, 0, 2.2]}>
+        <mesh position={[0, 1.2, 0]}>
+          <boxGeometry args={[2, 2.4, 2]} />
+          <meshStandardMaterial color="#cfe3ea" transparent opacity={0.22} roughness={0.05} />
+        </mesh>
+        <B p={[0, 0.72, 0]} s={[1.1, 0.05, 0.7]} c="#b98b5e" />
+      </group>
+      {/* break kitchen */}
+      <group position={[4.6, 0, -2.9]}>
+        <B p={[0, 0.5, 0]} s={[2.2, 1, 0.7]} c="#f2f0ea" />
+        <B p={[0, 1.03, 0]} s={[2.3, 0.06, 0.8]} c="#3a3a3a" r={0.4} />
+        <B p={[0.6, 1.25, -0.1]} s={[0.3, 0.4, 0.3]} c="#1a1a1a" />
+      </group>
+      {[-2, 0.4, 2.8].map((x) => (
+        <Pendant key={x} p={[x, 2.8, -1.2]} on={light.night || light.sunIntensity < 1.5} />
+      ))}
+      <Avatar appearance={PRIYA} pose="idle" position={[-4.2, 0, 1.9]} rotation={[0, 0.3, 0]}>
+        <NpcLabel name="Priya" />
+      </Avatar>
+      <Avatar appearance={COLLEAGUES[0]} pose="sit" position={[-2, 0, -1.65]} rotation={[0, Math.PI, 0]} />
+      <Avatar appearance={COLLEAGUES[1]} pose="sit" position={[2.8, 0, 0.35]} rotation={[0, Math.PI, 0]} />
+    </group>
+  );
+}
+
 const ANCHORS: Record<string, { pos: [number, number, number]; rotY: number; pose: Pose }> = {
   "food_hall:table": { pos: [-1.65, 0, 1], rotY: -Math.PI / 2, pose: "sit" },
   "food_hall:counter": { pos: [0.8, 0, -2.3], rotY: Math.PI, pose: "work" },
@@ -196,20 +275,25 @@ const ANCHORS: Record<string, { pos: [number, number, number]; rotY: number; pos
   "common_room:board": { pos: [-1.3, 0, -3.3], rotY: Math.PI, pose: "idle" },
   "common_room:computers": { pos: [2.1, 0, 2.15], rotY: Math.PI, pose: "work" },
   "common_room:rest_sofa": { pos: [-4.35, 0, 0.5], rotY: Math.PI / 2, pose: "sit" },
+  "city_office:kitchen": { pos: [4.6, 0, -2.2], rotY: Math.PI, pose: "work" },
+  "city_office:reception": { pos: [-4.2, 0, 3.5], rotY: Math.PI, pose: "idle" },
+  "food_hall:work": { pos: [-0.8, 0, -3.9], rotY: 0, pose: "work" },
+  "common_room:work": { pos: [3.2, 0, -3.0], rotY: Math.PI, pose: "work" },
+  "city_office:work": { pos: [0.4, 0, -1.65], rotY: Math.PI, pose: "sit" },
 };
 
 export default function VenueScene({ state, light }: { state: State; light: Lighting }) {
   const loc = state.character.location;
   const act = state.activity ? activityDef(state.activity.defId) : null;
-  const key = act ? `${loc}:${act.id === "rest_sofa" ? "rest_sofa" : act.anchor ?? ""}` : "";
+  const key = state.shift ? `${loc}:work` : act ? `${loc}:${act.id === "rest_sofa" ? "rest_sofa" : act.anchor ?? ""}` : "";
   const hidden = act?.event === "toilet" || act?.id === "public_shower";
-  const spot = ANCHORS[key] ?? { pos: [0.5, 0, 3.4] as [number, number, number], rotY: Math.PI * 0.95, pose: act ? ("work" as Pose) : ("idle" as Pose) };
+  const spot = ANCHORS[key] ?? { pos: [0.5, 0, 3.4] as [number, number, number], rotY: Math.PI * 0.95, pose: act || state.shift ? ("work" as Pose) : ("idle" as Pose) };
   return (
     <>
       <color attach="background" args={[light.sky]} />
       <hemisphereLight args={["#fff4e6", "#6f5f52", light.ambient + 0.15]} />
       <directionalLight position={[6, 10, 7]} intensity={light.sunIntensity * 0.8} color={light.sun} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-9} shadow-camera-right={9} shadow-camera-top={9} shadow-camera-bottom={-9} />
-      {loc === "food_hall" ? <FoodHall light={light} /> : <CommonRoom light={light} />}
+      {loc === "food_hall" ? <FoodHall light={light} /> : loc === "city_office" ? <CityOffice light={light} /> : <CommonRoom light={light} />}
       {!hidden && <Avatar appearance={state.character.appearance} pose={spot.pose} position={spot.pos} rotation={[0, spot.rotY + (spot.pose === "idle" && !act ? 0 : 0), 0]} />}
       <ContactShadows position={[0, 0.005, 0]} opacity={0.3} scale={16} blur={2.2} far={3} />
       <OrbitControls target={[0, 0.8, -0.3]} enablePan={false} minDistance={7} maxDistance={22} minPolarAngle={0.6} maxPolarAngle={1.15} minAzimuthAngle={-0.5} maxAzimuthAngle={0.9} enableDamping />

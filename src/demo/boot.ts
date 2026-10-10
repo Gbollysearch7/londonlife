@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import schema from "../../db/migrations/001_init.sql";
+import { MIGRATIONS, forPglite } from "./migrations";
 import { setDb } from "./db";
 
 /**
@@ -58,8 +58,16 @@ export async function bootDatabase(onProgress: (msg: string) => void) {
   } catch {
     db = await PGlite.create(opts); // a damaged save starts fresh rather than blocking play
   }
-  const ready = await db.query<{ ok: boolean }>("SELECT to_regclass('public.characters') IS NOT NULL AS ok");
-  if (!ready.rows[0].ok) await db.exec(schema.replace(/CREATE EXTENSION[^;]*;/, ""));
+  await db.exec("CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY)");
+  // Saves made before migration tracking existed already contain the first schema.
+  const legacy = await db.query<{ ok: boolean }>("SELECT to_regclass('public.characters') IS NOT NULL AS ok");
+  if (legacy.rows[0].ok) await db.query("INSERT INTO schema_migrations (name) VALUES ('001_init.sql') ON CONFLICT DO NOTHING");
+  for (const [name, sql] of MIGRATIONS) {
+    const done = await db.query("SELECT 1 FROM schema_migrations WHERE name = $1", [name]);
+    if (done.rows.length) continue;
+    await db.exec(forPglite(sql));
+    await db.query("INSERT INTO schema_migrations (name) VALUES ($1)", [name]);
+  }
   setDb(db);
   const acc = await db.query<{ id: string }>("SELECT id FROM accounts LIMIT 1");
   accountId = acc.rows[0]?.id ?? null;

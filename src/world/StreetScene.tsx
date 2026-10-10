@@ -19,6 +19,35 @@ function seeded(i: number) {
   return x - Math.floor(x);
 }
 
+function Tower({ x, night }: { x: number; night: boolean }) {
+  return (
+    <group position={[x, 0, -6.2]}>
+      <mesh position={[0, 6, 0]} castShadow receiveShadow>
+        <boxGeometry args={[3.4, 12, 3]} />
+        <meshStandardMaterial color="#7f95a8" roughness={0.15} metalness={0.4} />
+      </mesh>
+      {Array.from({ length: 11 }, (_, f) => (
+        <mesh key={f} position={[0, 1.6 + f * 1, 1.51]}>
+          <planeGeometry args={[3.2, 0.08]} />
+          <meshStandardMaterial color="#2b2f36" />
+        </mesh>
+      ))}
+      {night &&
+        Array.from({ length: 10 }, (_, f) => (
+          <mesh key={f} position={[((f * 7) % 3) - 1, 2.1 + f, 1.52]}>
+            <planeGeometry args={[0.9, 0.5]} />
+            <meshStandardMaterial color="#ffd58a" emissive="#ffb85a" emissiveIntensity={0.9} />
+          </mesh>
+        ))}
+      <mesh position={[0, 1.1, 1.52]}>
+        <planeGeometry args={[1.6, 2.2]} />
+        <meshStandardMaterial color="#e9eef0" emissive="#ffe6b0" emissiveIntensity={night ? 0.6 : 0.15} />
+      </mesh>
+      <TextLabel text="The City Office" colour="#f4eee4" background="rgba(23,35,43,0.85)" font="700 56px Georgia, serif" billboard={false} position={[0, 2.6, 1.56]} height={0.32} />
+    </group>
+  );
+}
+
 function Terrace({ x, i, night, sign }: { x: number; i: number; night: boolean; sign?: { name: string; colour: string } }) {
   const floors = 2 + Math.floor(seeded(i) * 2);
   const h = floors * 1.35 + 0.6;
@@ -197,9 +226,10 @@ export default function StreetScene({ state, light }: { state: State; light: Lig
         <boxGeometry args={[80, 0.12, 1.8]} />
         <meshStandardMaterial color="#9aa0a3" />
       </mesh>
-      {Array.from({ length: 21 }, (_, i) => (
+      {Array.from({ length: 24 }, (_, i) => (
         <Terrace key={i} i={i} x={-24 + i * 2.4} night={light.night} sign={signs[i]} />
       ))}
+      <Tower x={venue("city_office")!.street.x} night={light.night} />
       <TextLabel text="Home" position={[venue("home")!.street.x, 2.9, -4.2]} height={0.4} />
       {/* trees and streetlights */}
       {Array.from({ length: 9 }, (_, i) => (

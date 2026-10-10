@@ -57,6 +57,37 @@ function ActionRow({ a, onStart, disabled }: { a: Action; onStart: () => void; d
   );
 }
 
+function WorkSection({ s }: { s: State }) {
+  const run = useGame((x) => x.run);
+  const setSheet = useGame((x) => x.setSheet);
+  const pending = useGame((x) => x.pending);
+  const cur = s.career.current;
+  if (!cur || cur.workplace !== s.character.location || s.shift) return null;
+  return (
+    <section className={styles.group}>
+      <h3>Work</h3>
+      <div className={styles.action}>
+        <div className={styles.actionMain}>
+          <strong>Start your shift</strong>
+          <span className="tiny">
+            {cur.title} · 60 min · pays {money(cur.salaryPence)} before tax · trains {cur.skill}
+          </span>
+          {cur.reason && <p className={styles.reason}>{cur.reason}</p>}
+        </div>
+        <button
+          className="btn small"
+          disabled={!cur.canStart || !!pending}
+          onClick={async () => {
+            if (await run("StartShift", {}, "shift")) setSheet(null);
+          }}
+        >
+          Start shift
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export function ActionsSheet({ s }: { s: State }) {
   const setSheet = useGame((x) => x.setSheet);
   const run = useGame((x) => x.run);
@@ -72,6 +103,7 @@ export function ActionsSheet({ s }: { s: State }) {
       ) : (
         <>
           {place.kind === "venue" && <p className="muted">{place.blurb}</p>}
+          <WorkSection s={s} />
           {groups.map((g) => {
             const list = visible.filter((a) => a.group === g).sort((a, b) => Number(b.available) - Number(a.available));
             if (!list.length) return null;
@@ -147,7 +179,7 @@ export function MapSheet({ s }: { s: State }) {
   const list = s.directory.filter((d) => `${d.name} ${d.district} ${d.blurb}`.toLowerCase().includes(query.toLowerCase()));
   const busy = !!s.activity || !!s.journey;
   return (
-    <Sheet title="Camden" onClose={() => setSheet(null)}>
+    <Sheet title="Camden & the City" onClose={() => setSheet(null)}>
       <CamdenMap s={s} />
       <label className="field" style={{ marginTop: 12 }}>
         <span className="tiny">Search places</span>
@@ -188,13 +220,13 @@ export function MapSheet({ s }: { s: State }) {
         ))}
       </ul>
       {busy && <p className={styles.reason}>{s.journey ? "You're already travelling." : "Finish or stop your current activity before travelling."}</p>}
-      <p className="tiny">More boroughs open in Milestone 2. Fares are fictional game prices.</p>
+      <p className="tiny">The Tube runs between districts. More boroughs are on the way. Fares are fictional game prices.</p>
     </Sheet>
   );
 }
 
 function CamdenMap({ s }: { s: State }) {
-  const pts: Record<string, [number, number]> = { home: [60, 120], food_hall: [190, 70], common_room: [300, 130] };
+  const pts: Record<string, [number, number]> = { home: [50, 120], food_hall: [160, 70], common_room: [250, 130], city_office: [330, 52] };
   return (
     <svg viewBox="0 0 360 190" className={styles.map} role="img" aria-label="Map of the Camden slice">
       <rect width="360" height="190" fill="#e9e1d2" rx="12" />
@@ -206,14 +238,17 @@ function CamdenMap({ s }: { s: State }) {
       <text x="196" y="22" fontSize="9" fill="#7b858c">High Street</text>
       <circle cx="110" cy="40" r="22" fill="#cfdcc4" />
       <text x="96" y="43" fontSize="8" fill="#4f7a46">Green</text>
+      <rect x="292" y="14" width="64" height="60" rx="8" fill="#d6dce1" />
+      <text x="324" y="86" fontSize="9" fill="#5b6670" textAnchor="middle">The City</text>
       <polyline points={`${pts.home} ${pts.food_hall} ${pts.common_room}`} fill="none" stroke="#bc3d3b" strokeDasharray="4 4" strokeWidth="2" />
+      <path d={`M${pts.food_hall} L${pts.city_office}`} stroke="#2f4a6b" strokeWidth="2.5" strokeDasharray="1 5" strokeLinecap="round" fill="none" />
       {s.directory.map((d) => {
         const [x, y] = pts[d.id];
         return (
           <g key={d.id}>
             <circle cx={x} cy={y} r={d.here ? 9 : 7} fill={d.id === "home" ? "#c69c58" : "#234c42"} stroke="#fbf8f2" strokeWidth="2.5" />
             <text x={x} y={y - 13} fontSize="10" fontWeight="700" textAnchor="middle" fill="#17232b">
-              {d.name.replace("Common Table Food Hall", "Food Hall")}
+              {d.name.replace("Common Table Food Hall", "Food Hall").replace("The City Office", "City Office")}
             </text>
           </g>
         );

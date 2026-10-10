@@ -8,6 +8,7 @@ import { money } from "./format";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
+  { id: "jobs", name: "Jobs", icon: "◆" },
   { id: "missions", name: "Missions", icon: "✓" },
   { id: "bank", name: "Bank", icon: "£" },
   { id: "skills", name: "Skills", icon: "↑" },
@@ -20,7 +21,6 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
 ];
 
 const LATER: { name: string; when: string }[] = [
-  { name: "Jobs", when: "Milestone 2" },
   { name: "Courses", when: "Milestone 2" },
   { name: "Food delivery", when: "Milestone 2" },
   { name: "Wardrobe", when: "Milestone 2" },
@@ -49,6 +49,7 @@ const LATER: { name: string; when: string }[] = [
 
 const TITLES: Record<string, string> = {
   home: "Phone",
+  jobs: "Jobs",
   missions: "Daily missions",
   bank: "Bank",
   skills: "Skills",
@@ -108,6 +109,7 @@ export function PhoneSheet({ s }: { s: State }) {
           </ul>
         </>
       )}
+      {current === "jobs" && <Jobs s={s} />}
       {current === "missions" && <Missions s={s} />}
       {current === "bank" && <Bank s={s} />}
       {current === "skills" && <Skills s={s} />}
@@ -117,6 +119,130 @@ export function PhoneSheet({ s }: { s: State }) {
       {current === "help" && <Help />}
       {current === "settings" && <Settings />}
     </Sheet>
+  );
+}
+
+function Jobs({ s }: { s: State }) {
+  const run = useGame((x) => x.run);
+  const pending = useGame((x) => x.pending);
+  const setSheet = useGame((x) => x.setSheet);
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const cur = s.career.current;
+  return (
+    <>
+      {cur ? (
+        <section className={styles.workCard} data-testid="current-job">
+          <div className={styles.workRow}>
+            <div>
+              <span className="tiny">{cur.name}</span>
+              <h3 style={{ fontSize: 22 }}>{cur.title}</h3>
+            </div>
+            <span className="chip good">{money(cur.salaryPence)} / shift</span>
+          </div>
+          <div>
+            <div className={styles.workRow}>
+              <span className="tiny">Performance</span>
+              <span className="tiny">{cur.performance}/100</span>
+            </div>
+            <div className={styles.bar}>
+              <span style={{ width: `${cur.performance}%` }} />
+            </div>
+          </div>
+          {cur.next ? (
+            <p className="tiny">
+              Next: <strong>{cur.next.title}</strong> at {money(cur.next.salaryPence)} a shift. Needs 100 performance at the end of a full shift and {cur.shiftsNeeded} full shifts at
+              this grade ({cur.shiftsAtGrade}/{cur.shiftsNeeded} done)
+              {cur.next.gate ? `, plus ${cur.next.gate.label}${cur.next.gate.met ? " ✓" : ""}` : ""}.
+            </p>
+          ) : (
+            <p className="tiny">You're at the top of this career.</p>
+          )}
+          <p className="tiny">
+            {cur.workplaceName} · {cur.schedule} London time · trains {cur.skill}
+          </p>
+          {cur.canStart ? (
+            <p className="tiny" style={{ color: "#1d5a45", fontWeight: 600 }}>You can start a shift now from the Here menu.</p>
+          ) : (
+            <p className={styles.reason}>{cur.reason}</p>
+          )}
+          {!s.shift && s.character.location !== cur.workplace && (
+            <button className="btn small secondary" onClick={() => setSheet("map")}>
+              Travel to {cur.workplaceName}
+            </button>
+          )}
+        </section>
+      ) : (
+        <p className="muted">Pick a career to start earning a wage. One shift a day, an hour long; do well and you'll be promoted.</p>
+      )}
+
+      <h3 className={styles.subhead}>Careers</h3>
+      <ul className={styles.list}>
+        {s.career.catalogue.map((k) => (
+          <li key={k.id} className={styles.workCard}>
+            <div className={styles.workRow}>
+              <strong>{k.name}</strong>
+              {k.current ? <span className="chip good">Your job</span> : <span className="chip">{money(k.payPence)} / shift to start</span>}
+            </div>
+            <p className={styles.actionDesc}>{k.blurb}</p>
+            <div className={styles.ladder}>
+              {k.ladder.map((r) => (
+                <span key={r}>{r}</span>
+              ))}
+            </div>
+            <span className="tiny">
+              {k.workplace} · {k.schedule} · trains {k.skill} · up to {money(k.topPayPence)} a shift
+            </span>
+            {!k.current &&
+              (k.reason ? (
+                <p className={styles.reason}>{k.reason}</p>
+              ) : confirm === k.id ? (
+                <div className={styles.confirm}>
+                  <span>
+                    {cur ? `You'll leave your job as ${cur.title} and start as ${k.entryRole}. Your progress there won't carry over.` : `You'll start as ${k.entryRole}.`}
+                  </span>
+                  <div>
+                    <button className="btn small secondary" onClick={() => setConfirm(null)}>
+                      Cancel
+                    </button>
+                    <button className="btn small" disabled={!!pending || !!s.shift} onClick={async () => (await run("JoinCareer", { careerId: k.id }, "join"), setConfirm(null))}>
+                      Join {k.name}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button className="btn small" disabled={!!s.shift} onClick={() => setConfirm(k.id)}>
+                  {cur ? "Switch to this career" : `Start as ${k.entryRole}`}
+                </button>
+              ))}
+          </li>
+        ))}
+      </ul>
+
+      {s.career.history.length > 0 && (
+        <>
+          <h3 className={styles.subhead}>Recent shifts</h3>
+          <ul className={styles.ledger}>
+            {s.career.history.map((h) => (
+              <li key={h.id}>
+                <div>
+                  <strong>{h.title}</strong>
+                  <span className="tiny">
+                    {h.day} · {h.status === "left" ? "left early" : "full shift"} · performance {h.perfDelta >= 0 ? "+" : ""}
+                    {h.perfDelta}
+                    {h.promoted ? " · promoted" : ""}
+                  </span>
+                </div>
+                <div className={styles.ledgerAmt}>
+                  <span className={styles.pos}>{money(h.net)}</span>
+                  <span className="tiny">tax {money(h.tax)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className="tiny">Pay, tax and careers are fictional game values.</p>
+    </>
   );
 }
 
@@ -321,7 +447,7 @@ export function Tour({ s }: { s: State }) {
   return (
     <>
       <p className="muted">
-        {done} of {s.tutorial.filter((t) => !("locked" in t && t.locked)).length} done. Optional — go at your own pace.
+        {done} of {s.tutorial.length} done. Optional — go at your own pace.
       </p>
       <ol className={styles.tour}>
         {s.tutorial.map((t) => (
@@ -329,7 +455,6 @@ export function Tour({ s }: { s: State }) {
             <span aria-hidden>{t.done ? "✓" : "○"}</span>
             <div>
               {t.label}
-              {"locked" in t && t.locked && <span className="tiny"> — {t.locked}</span>}
             </div>
           </li>
         ))}

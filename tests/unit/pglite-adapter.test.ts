@@ -8,7 +8,7 @@ describe("PGlite adapter used by the test build", () => {
   let game: typeof import("@/server/game");
   beforeAll(async () => {
     const db = new PGlite();
-    await db.exec(fs.readFileSync("db/migrations/001_init.sql", "utf8").replace(/CREATE EXTENSION[^;]*;/, ""));
+    for (const f of fs.readdirSync("db/migrations").sort()) await db.exec(fs.readFileSync(`db/migrations/${f}`, "utf8").replace(/CREATE EXTENSION[^;]*;/, ""));
     setDb(db);
     game = await import("@/server/game");
   });

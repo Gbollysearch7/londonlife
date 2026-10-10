@@ -24,6 +24,11 @@ const swap = {
   },
 };
 
+// The test build embeds migrations explicitly; fail loudly if one is missing.
+const onDisk = fs.readdirSync(r("db/migrations")).filter((f) => f.endsWith(".sql")).sort();
+const listed = [...fs.readFileSync(r("src/demo/migrations.ts"), "utf8").matchAll(/\["(\d+_[\w]+\.sql)"/g)].map((m) => m[1]);
+if (JSON.stringify(onDisk) !== JSON.stringify(listed)) throw new Error(`src/demo/migrations.ts lists ${listed} but db/migrations has ${onDisk}`);
+
 const result = await build({
   entryPoints: [r("src/demo/main.tsx")],
   bundle: true,

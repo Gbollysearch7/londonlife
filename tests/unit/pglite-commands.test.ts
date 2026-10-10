@@ -11,7 +11,7 @@ describe("command runner on PGlite", () => {
   beforeAll(async () => {
     const { setDb } = await import("@/demo/db");
     const db = new PGlite();
-    await db.exec(fs.readFileSync("db/migrations/001_init.sql", "utf8").replace(/CREATE EXTENSION[^;]*;/, ""));
+    for (const f of fs.readdirSync("db/migrations").sort()) await db.exec(fs.readFileSync(`db/migrations/${f}`, "utf8").replace(/CREATE EXTENSION[^;]*;/, ""));
     setDb(db);
     acc = (await db.query<{ id: string }>("INSERT INTO accounts (email, password_hash, adult_confirmed_at) VALUES ('x','x',now()) RETURNING id")).rows[0].id;
     commands = await import("@/server/commands");

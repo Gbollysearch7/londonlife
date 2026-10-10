@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { ALL_MISSIONS_BONUS, CONTENT_VERSION, DAILY_MISSION_SWAPS, FIRST_CARE_STARS, RESALE_FRACTION, START_NEEDS, URGENT_THRESHOLD } from "@/content/balance";
 import { AMBITIONS, APPEARANCE_OPTIONS, HOME_TIERS, ORIGINS, TRAITS, type Appearance } from "@/content/character";
 import { FURNITURE, ITEMS, furnitureDef, itemDef } from "@/content/catalogue";
-import { ACTIVITIES, GROCERY_SHOP, MISSIONS, TRAVEL_MODES, VENUES, activityDef, journeyQuote, missionDef, venue, type TravelMode } from "@/content/world";
+import { ACTIVITIES, GROCERY_SHOP, MISSIONS, TRAVEL_MODES, VENUES, activityDef, journeyQuote, missionDef, modesFor, venue, type TravelMode } from "@/content/world";
 import { NEED_IDS, SKILL_IDS, type ActivityDef, type LocationId, type Needs, type SkillId } from "@/content/types";
 import { NEED_CONSEQUENCES, NEED_LABELS, NEED_RECOVERY, applyEffects, settleNeeds } from "@/sim/needs";
 import { placementError, type Placed } from "@/sim/placement";
@@ -10,10 +10,11 @@ import { computeMood, levelForXp, reputation, skillProgress, weatherFor, xpWithT
 import { assignMissions, layoutStarterHome, missionProgress, pickOrigin, swapMission, type EventRow } from "@/sim/setup";
 import { durationMs, londonClock, londonDayKey, timeScale } from "@/sim/time";
 import { GameError, type Tx } from "./db";
+import { careerView, settleDueShift } from "./careers";
 
 // ───────────────────────────── rows ─────────────────────────────
 
-interface CharRow {
+export interface CharRow {
   id: string;
   account_id: string;
   name: string;
@@ -51,12 +52,12 @@ function toChar(r: Record<string, unknown>): CharRow {
   };
 }
 
-async function lockCharacter(tx: Tx, accountId: string): Promise<CharRow | null> {
+export async function lockCharacter(tx: Tx, accountId: string): Promise<CharRow | null> {
   const res = await tx.query("SELECT * FROM characters WHERE account_id = $1 FOR UPDATE", [accountId]);
   return res.rowCount ? toChar(res.rows[0]) : null;
 }
 
-async function requireCharacter(tx: Tx, accountId: string) {
+export async function requireCharacter(tx: Tx, accountId: string) {
   const c = await lockCharacter(tx, accountId);
   if (!c) throw new GameError("no_character", "Create your character first.", 409);
   return c;
@@ -64,9 +65,9 @@ async function requireCharacter(tx: Tx, accountId: string) {
 
 // ─────────────────────────── primitives ───────────────────────────
 
-const fmtMoney = (p: number) => `£${(p / 100).toFixed(2)}`;
+export const fmtMoney = (p: number) => `£${(p / 100).toFixed(2)}`;
 
-async function moveMoney(
+export async function moveMoney(
   tx: Tx,
   c: CharRow,
   amount: number,
@@ -92,7 +93,7 @@ async function inventoryOf(tx: Tx, charId: string): Promise<Record<string, numbe
   return Object.fromEntries(res.rows.map((r) => [r.item_id, Number(r.qty)]));
 }
 
-async function changeItems(tx: Tx, charId: string, items: Record<string, number>, sign: 1 | -1) {
+export async function changeItems(tx: Tx, charId: string, items: Record<string, number>, sign: 1 | -1) {
   for (const [itemId, qty] of Object.entries(items)) {
     if (sign === 1) {
       await tx.query(
@@ -110,7 +111,7 @@ async function changeItems(tx: Tx, charId: string, items: Record<string, number>
   }
 }
 
-async function emit(tx: Tx, charId: string, type: string, data: Record<string, string>, now: Date) {
+export async function emit(tx: Tx, charId: string, type: string, data: Record<string, string>, now: Date) {
   await tx.query("INSERT INTO game_events (character_id, type, data, period_key, created_at) VALUES ($1, $2, $3, $4, $5)", [
     charId,
     type,
@@ -120,7 +121,7 @@ async function emit(tx: Tx, charId: string, type: string, data: Record<string, s
   ]);
 }
 
-async function grantOnce(tx: Tx, charId: string, key: string, now: Date): Promise<boolean> {
+export async function grantOnce(tx: Tx, charId: string, key: string, now: Date): Promise<boolean> {
   const res = await tx.query(
     "INSERT INTO once_rewards (character_id, reward_key, granted_at) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
     [charId, key, now],
@@ -128,7 +129,7 @@ async function grantOnce(tx: Tx, charId: string, key: string, now: Date): Promis
   return res.rowCount === 1;
 }
 
-async function addXp(tx: Tx, c: CharRow, skill: SkillId, base: number, now: Date) {
+export async function addXp(tx: Tx, c: CharRow, skill: SkillId, base: number, now: Date) {
   const gained = xpWithTraits(skill, base, c.traits);
   const res = await tx.query(
     `UPDATE skills SET xp = xp + $3, last_used_at = $4 WHERE character_id = $1 AND skill_id = $2 RETURNING xp, best_level`,
@@ -143,7 +144,7 @@ async function addXp(tx: Tx, c: CharRow, skill: SkillId, base: number, now: Date
   return { skill, gained, level, levelledUp: level > before };
 }
 
-async function saveNeeds(tx: Tx, c: CharRow, now: Date) {
+export async function saveNeeds(tx: Tx, c: CharRow, now: Date) {
   await tx.query(
     `UPDATE characters SET hunger=$2, energy=$3, fun=$4, social=$5, hygiene=$6, bladder=$7, needs_settled_at=$8 WHERE id=$1`,
     [c.id, c.needs.hunger, c.needs.energy, c.needs.fun, c.needs.social, c.needs.hygiene, c.needs.bladder, now],
@@ -153,7 +154,7 @@ async function saveNeeds(tx: Tx, c: CharRow, now: Date) {
 
 // ─────────────────────────── home context ───────────────────────────
 
-async function homeContext(tx: Tx, c: CharRow) {
+export async function homeContext(tx: Tx, c: CharRow) {
   const home = (await tx.query("SELECT * FROM homes WHERE character_id = $1", [c.id])).rows[0];
   const tier = HOME_TIERS.find((t) => t.id === home.tier_id)!;
   const rows = (await tx.query("SELECT * FROM furniture WHERE character_id = $1 ORDER BY created_at, id", [c.id])).rows;
@@ -201,6 +202,8 @@ async function settle(tx: Tx, c: CharRow, now: Date) {
     [c.id, now],
   );
   for (const row of due.rows) notices.push(...(await completeActivity(tx, c, row, now)));
+
+  notices.push(...(await settleDueShift(tx, c, now)));
 
   const arrived = await tx.query(
     `UPDATE journeys SET status = 'arrived', settled_at = $2
@@ -268,7 +271,7 @@ const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
 // ─────────────────────────── availability ───────────────────────────
 
-interface Ctx {
+export interface Ctx {
   c: CharRow;
   home: HomeCtx;
   inv: Record<string, number>;
@@ -278,10 +281,11 @@ interface Ctx {
   onceDone: Set<string>;
   running: Record<string, unknown> | null;
   journey: Record<string, unknown> | null;
+  shift: Record<string, unknown> | null;
   now: Date;
 }
 
-async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
+export async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
   const day = londonDayKey(now);
   // Sequential: one pg client cannot run queries concurrently.
   const home = await homeContext(tx, c);
@@ -298,6 +302,7 @@ async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
   const once = await tx.query("SELECT reward_key FROM once_rewards WHERE character_id = $1", [c.id]);
   const running = await tx.query("SELECT * FROM activities WHERE character_id = $1 AND status = 'running'", [c.id]);
   const journey = await tx.query("SELECT * FROM journeys WHERE character_id = $1 AND status = 'in_transit'", [c.id]);
+  const shift = await tx.query("SELECT * FROM shifts WHERE character_id = $1 AND status = 'running'", [c.id]);
   return {
     c,
     home,
@@ -308,14 +313,16 @@ async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
     onceDone: new Set(once.rows.map((r) => r.reward_key)),
     running: running.rows[0] ?? null,
     journey: journey.rows[0] ?? null,
+    shift: shift.rows[0] ?? null,
     now,
   };
 }
 
 /** The single source of truth for "can this start?" — used by both the action list and StartActivity. */
-function activityBlocker(def: ActivityDef, ctx: Ctx): string | null {
+export function activityBlocker(def: ActivityDef, ctx: Ctx): string | null {
   const { c } = ctx;
   if (ctx.journey) return "You're travelling.";
+  if (ctx.shift) return "You're on shift. Leave your shift first.";
   if (ctx.running) return "Finish or cancel what you're doing first.";
   if (c.location !== def.location) return `Only at ${venue(def.location)?.name}.`;
   if (def.requires && !ctx.home.tags.has(def.requires)) return `Needs ${requirementName(def.requires)} placed at home.`;
@@ -456,6 +463,8 @@ export async function startJourney(tx: Tx, accountId: string, p: { destination: 
   const ctx = await loadCtx(tx, c, now);
   if (ctx.journey) throw new GameError("travelling", "You're already travelling.");
   if (ctx.running) throw new GameError("busy", "Finish or cancel what you're doing first.");
+  if (ctx.shift) throw new GameError("on_shift", "You're on shift. Leave your shift before travelling.");
+  if (!modesFor(c.location, p.destination).includes(p.mode)) throw new GameError("bad_mode", "The Tube only runs between districts.");
   const q = journeyQuote(c.location, p.destination, p.mode);
   const id = crypto.randomUUID();
   await moveMoney(tx, c, -q.farePence, "travel", `${q.name} to ${venue(p.destination)!.name}`, { type: "journey", id });
@@ -771,7 +780,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
       access: v.access,
       npcs: v.npcs,
       here: c.location === v.id,
-      quotes: c.location === v.id ? [] : (Object.keys(TRAVEL_MODES) as TravelMode[]).map((m) => journeyQuote(c.location, v.id, m)),
+      quotes: c.location === v.id ? [] : modesFor(c.location, v.id).map((m) => journeyQuote(c.location, v.id, m)),
     })),
     missions: {
       day: a.day,
@@ -790,11 +799,12 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
       { id: "travel", label: "Walk or take the bus to a venue", done: anyEvents.has("journey_arrived") },
       { id: "greet", label: "Chat with a local", done: anyEvents.has("npc_chat") },
       { id: "task", label: "Help Bev at The Common Room (£20)", done: ctx.onceDone.has("activity:community_lunch_setup") },
-      { id: "career", label: "Choose a career or course", done: false, locked: "Careers and courses open in Milestone 2." },
+      { id: "career", label: "Join a career in the Jobs app", done: anyEvents.has("career_joined") },
       { id: "furnish", label: "Buy and place a piece of furniture", done: anyEvents.has("furniture_placed") },
       { id: "mission", label: "Claim a daily mission", done: anyClaim },
     ],
     ledger,
+    ...(await careerView(tx, c, ctx, now)),
     catalogue: FURNITURE,
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };
