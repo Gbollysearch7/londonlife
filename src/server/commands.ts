@@ -1,0 +1,54 @@
+import { GameError, withTx, type Tx } from "./db";
+import * as game from "./game";
+
+type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
+
+const HANDLERS: Record<string, Handler> = {
+  CreateCharacter: game.createCharacter as Handler,
+  StartActivity: game.startActivity as Handler,
+  CancelActivity: ((tx, a, _p, now) => game.cancelActivity(tx, a, now)) as Handler,
+  StartJourney: game.startJourney as Handler,
+  CancelJourney: ((tx, a, _p, now) => game.cancelJourney(tx, a, now)) as Handler,
+  BuyGroceries: game.buyGroceries as Handler,
+  BuyFurniture: game.buyFurniture as Handler,
+  PlaceFurniture: game.placeFurniture as Handler,
+  StoreFurniture: game.storeFurniture as Handler,
+  SellFurniture: game.sellFurniture as Handler,
+  ClaimMission: game.claimMission as Handler,
+  SwapMission: game.swapDailyMission as Handler,
+};
+
+export interface CommandResult {
+  ok: true;
+  receipt: unknown;
+  replayed: boolean;
+}
+
+/**
+ * Runs one mutating command in a single transaction.
+ * The idempotency row is inserted first: a concurrent duplicate blocks on it, then replays the stored receipt.
+ * A rejected command rolls back entirely (including the idempotency row), so nothing is partially debited.
+ */
+export async function runCommand(accountId: string, key: string, type: string, payload: unknown, now = new Date()): Promise<CommandResult> {
+  if (typeof key !== "string" || key.length < 8 || key.length > 100) throw new GameError("bad_key", "Missing idempotency key.");
+  const handler = HANDLERS[type];
+  if (!handler) throw new GameError("unknown_command", `Unknown command ${type}.`);
+  return withTx(async (tx) => {
+    const claim = await tx.query(
+      "INSERT INTO idempotency_keys (account_id, key, command, response) VALUES ($1, $2, $3, '{}') ON CONFLICT DO NOTHING",
+      [accountId, key, type],
+    );
+    if (!claim.rowCount) {
+      const prior = await tx.query("SELECT command, response FROM idempotency_keys WHERE account_id = $1 AND key = $2", [accountId, key]);
+      if (prior.rows[0].command !== type) throw new GameError("key_reused", "That request key was already used for a different action.");
+      return { ok: true, receipt: prior.rows[0].response, replayed: true };
+    }
+    const receipt = await handler(tx, accountId, (payload ?? {}) as never, now);
+    await tx.query("UPDATE idempotency_keys SET response = $3 WHERE account_id = $1 AND key = $2", [accountId, key, receipt]);
+    return { ok: true, receipt, replayed: false };
+  });
+}
+
+export function loadStateFor(accountId: string, now = new Date()) {
+  return withTx((tx) => game.loadState(tx, accountId, now));
+}
