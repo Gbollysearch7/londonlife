@@ -53,6 +53,14 @@ export type PropType =
   | "yoga_mat"
   | "mirror"
   | "bookcase"
+  // Venues part A props (renderers in kit_a.tsx)
+  | "pool_table"
+  | "easel"
+  | "art_frame"
+  | "train"
+  | "floor_rug"
+  | "lectern"
+  | "pew"
   | "reading_table"
   | "armchair"
   | "lamp_post"
@@ -139,6 +147,19 @@ export function propBlock(s: PropSpec): [number, number] | null {
       return [w ?? 1.8, 0.6];
     case "bookcase":
       return [w ?? 2, 0.5];
+    case "pool_table":
+      return [2.4, 1.4];
+    case "easel":
+      return [0.6, 0.6];
+    case "train":
+      return [w ?? 10, 2.6];
+    case "lectern":
+      return [0.6, 0.5];
+    case "pew":
+      return [w ?? 2.6, 0.6];
+    case "art_frame":
+    case "floor_rug":
+      return null;
     case "reading_table":
       return [w ?? 2, 1.5];
     case "armchair":

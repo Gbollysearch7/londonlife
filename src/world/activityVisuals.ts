@@ -1,5 +1,6 @@
 import type { ParticleKind } from "./effects";
 import type { Pose, Prop } from "./poses";
+import { VISUALS_A } from "./activityVisuals_a";
 
 /** How an activity looks in the world: pose at its anchor, held prop, particles and privacy. */
 export interface Visual {
@@ -94,6 +95,7 @@ const BY_ID: Record<string, Visual> = {
   health_check: { pose: "talk" },
   health_volunteer: { pose: "work", particles: "chat" },
   health_water: { pose: "sit", seated: true },
+  ...VISUALS_A,
 };
 
 export function visualFor(activityId: string): Visual {

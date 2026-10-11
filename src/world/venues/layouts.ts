@@ -3,6 +3,7 @@ import type { Scene } from "@/client/sound";
 import type { Outfit } from "../Avatar";
 import type { Pose, Prop } from "../poses";
 import type { PropSpec, Shell } from "./props";
+import { LAYOUTS_A } from "./layouts_a";
 
 /** Where the avatar stands (or sits) to do something. Angles in degrees; 0 faces +Z. */
 export interface AnchorSpec {
@@ -626,4 +627,5 @@ export const LAYOUTS: Record<string, VenueLayout> = {
     camera: { pos: [5, 7, 10], target: [0, 0.8, -0.3] },
     sound: calm({ room: 0.35, murmur: 0.2 }),
   },
+  ...LAYOUTS_A,
 };

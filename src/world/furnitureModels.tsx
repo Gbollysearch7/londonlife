@@ -4,6 +4,7 @@
  * front facing +Z. One grid cell = 1 unit. Footprints match the catalogue exactly.
  */
 import type { ReactNode } from "react";
+import { ArtModel } from "./venues/kit_a";
 
 const M = ({ c, r = 0.8, m = 0, e }: { c: string; r?: number; m?: number; e?: string }) => (
   <meshStandardMaterial color={c} roughness={r} metalness={m} emissive={e ?? "#000"} emissiveIntensity={e ? 1 : 0} />
@@ -64,6 +65,7 @@ function Counter({ children, colour = "#e8e2d6" }: { children?: ReactNode; colou
 }
 
 export function FurnitureModel({ defId, colour, w, d }: { defId: string; colour: string; w: number; d: number }) {
+  if (defId.startsWith("art_")) return <ArtModel defId={defId} colour={colour} />;
   switch (defId) {
     case "single_bed":
       return <Bed w={1} colour={colour} />;
