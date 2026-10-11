@@ -33,6 +33,7 @@ import { garageFor, lateGameView, settleLateGame } from "./lateGame";
 import { galleryView } from "./venues_a";
 import { familyView } from "./family";
 import { propertyView, settleProperty } from "./property";
+import { fleetsView, settleFleets } from "./fleets";
 
 // ───────────────────────────── rows ─────────────────────────────
 
@@ -268,6 +269,7 @@ export async function settle(tx: Tx, c: CharRow, now: Date) {
   }
   notices.push(...(await settleLateGame(tx, c, now)));
   notices.push(...(await settleProperty(tx, c, now)));
+  notices.push(...(await settleFleets(tx, c, now)));
   return notices;
 }
 
@@ -997,6 +999,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     ...(await galleryView(tx, c, now)),
     ...(await familyView(tx, c, ctx, now)),
     ...(await propertyView(tx, c, now)),
+    ...(await fleetsView(tx, c, now)),
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };
   out.character.ambition.progress = goals.ambition.progress;

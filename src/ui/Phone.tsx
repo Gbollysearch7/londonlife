@@ -16,6 +16,7 @@ import { LadderBadges } from "./Ladder";
 import { InsuranceApp, PetsApp, VehiclesApp, lateBadge } from "./LateGame";
 import { FamilyApp, InvitationsApp, familyBadge } from "./Family";
 import { InvestApp } from "./Invest";
+import { AdvertisingApp, TransportApp } from "./Fleets";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
@@ -46,6 +47,8 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "insurance", name: "Insurance", icon: "☂" },
   { id: "pets", name: "Pets", icon: "♥" },
   { id: "invest", name: "Invest", icon: "▦" },
+  { id: "transport", name: "Transport Co", icon: "◧" },
+  { id: "ads", name: "Advertising", icon: "▤" },
   { id: "skills", name: "Skills", icon: "↑" },
   { id: "profile", name: "Profile", icon: "☺" },
   { id: "inventory", name: "Kitchen", icon: "◫" },
@@ -69,8 +72,6 @@ const LATER: { name: string; when: string }[] = [
   { name: "City feed", when: "Milestone 3" },
   { name: "Police", when: "Milestone 4" },
   { name: "Court", when: "Milestone 4" },
-  { name: "Transport Co", when: "Milestone 5" },
-  { name: "Advertising", when: "Milestone 5" },
 ];
 
 const TITLES: Record<string, string> = {
@@ -97,6 +98,8 @@ const TITLES: Record<string, string> = {
   insurance: "Insurance",
   pets: "Pets",
   invest: "Invest",
+  transport: "Transport Co",
+  ads: "Advertising",
   goals: "Goals",
   perks: "Perks",
   people: "People",
@@ -205,6 +208,8 @@ export function PhoneSheet({ s }: { s: State }) {
       {current === "insurance" && <InsuranceApp s={s} />}
       {current === "pets" && <PetsApp s={s} />}
       {current === "invest" && <InvestApp s={s} />}
+      {current === "transport" && <TransportApp s={s} />}
+      {current === "ads" && <AdvertisingApp s={s} />}
       {current === "skills" && <Skills s={s} />}
       {current === "profile" && <Profile s={s} />}
       {current === "inventory" && <Inventory s={s} />}

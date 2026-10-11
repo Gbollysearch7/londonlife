@@ -19,6 +19,7 @@ import * as late from "./lateGame";
 import * as venuesA from "./venues_a";
 import * as family from "./family";
 import * as property from "./property";
+import * as fleets from "./fleets";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -132,6 +133,11 @@ const HANDLERS: Record<string, Handler> = {
   SellPlot: property.sellPlot as Handler,
   StartConstruction: property.startConstruction as Handler,
   CancelConstruction: property.cancelConstruction as Handler,
+  RegisterFirm: fleets.registerFirm as Handler,
+  StartContract: fleets.startContract as Handler,
+  AbandonContract: fleets.abandonContract as Handler,
+  BookAd: fleets.bookAd as Handler,
+  CancelAd: fleets.cancelAd as Handler,
 };
 
 export interface CommandResult {

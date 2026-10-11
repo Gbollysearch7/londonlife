@@ -21,6 +21,7 @@ import { Prop, ShellView } from "./venues/kit";
 import { LAYOUTS, type AnchorSpec, type VenueLayout } from "./venues/layouts";
 import { buildVenueGrid } from "./venues/props";
 import { LiveGameTables } from "./LiveGameTable";
+import Billboards from "./Billboards";
 
 const rad = (d: number) => (d * Math.PI) / 180;
 
@@ -155,6 +156,7 @@ export default function VenueScene({ state, light }: { state: State; light: Ligh
         <Prop key={i} s={p} night={light.night} />
       ))}
       <LiveGameTables props={layout.props} state={state} />
+      <Billboards where={loc} state={state} />
       {layout.npcs.map((n) => (
         <Npc
           key={n.id}
