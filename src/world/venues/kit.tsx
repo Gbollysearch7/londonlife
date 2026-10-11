@@ -9,6 +9,7 @@ import type { Group, Mesh } from "three";
 import { TextLabel } from "../TextLabel";
 import { brickTexture, floorTexture, panelTexture, plasterTexture } from "../textures";
 import type { PropSpec, Shell, WallSpec } from "./props";
+import { PropB } from "./kit_b";
 
 export type { PropSpec, PropType, Shell, WallSpec } from "./props";
 
@@ -1054,6 +1055,8 @@ export function Prop({ s, night }: { s: PropSpec; night: boolean }) {
       );
       break;
     }
+    default:
+      body = <PropB s={s} night={night} />;
   }
   return (
     <group position={[s.p[0], s.lift ?? 0, s.p[1]]} rotation={[0, deg(s.r), 0]}>

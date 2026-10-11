@@ -1,6 +1,7 @@
 /** Venue prop data: pure types and walk-blocking footprints (no rendering), shared by the kit and navigation. */
 import { blockRect, makeGrid, type NavGrid } from "../nav";
 import type { FloorKind } from "../textures";
+import { isPropB, propBlockB, type PropTypeB } from "./props_b";
 
 export interface PropSpec {
   t: PropType;
@@ -86,10 +87,12 @@ export type PropType =
   | "pillar"
   | "paving"
   | "kiosk"
-  | "court";
+  | "court"
+  | PropTypeB;
 
 /** Walk-blocking footprint [width, depth] at rotation 0, or null for decorations you can walk past. */
 export function propBlock(s: PropSpec): [number, number] | null {
+  if (isPropB(s.t)) return propBlockB({ t: s.t, w: s.w, d: s.d });
   const w = s.w;
   const d = s.d;
   switch (s.t) {

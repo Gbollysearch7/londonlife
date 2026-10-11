@@ -1,5 +1,6 @@
 import { ITEMS, RECIPES } from "./catalogue";
 import { CITY_ACTIVITIES, CITY_VENUES } from "./city";
+import { ACTIVITIES_B, VENUES_B } from "./city_b";
 import { COURSES } from "./courses";
 import type { ActivityDef, LocationId, MissionDef, VenueDef } from "./types";
 
@@ -56,6 +57,7 @@ export const VENUES: VenueDef[] = [
     tags: ["work"],
   },
   ...CITY_VENUES,
+  ...VENUES_B,
 ];
 
 export const venue = (id: string) => VENUES.find((v) => v.id === id);
@@ -215,6 +217,7 @@ export const ACTIVITIES: ActivityDef[] = [
   { id: "chat_priya", label: "Chat with Priya", description: "Priya is an NPC: a named local character, not another player.", location: "city_office", minutes: 2, costPence: 0, needs: { social: 12 }, xp: { skill: "charisma", amount: 4 }, cooldownMin: 30, cancelRule: NO_REFUND, event: "npc_chat", eventData: { npc: "priya" }, npc: "priya", anchor: "reception" },
   { id: "office_toilet", label: "Use the toilets", description: "", location: "city_office", minutes: 1, costPence: 0, needs: { bladder: 65 }, cancelRule: NO_REFUND, event: "toilet", anchor: "wc" },
   ...CITY_ACTIVITIES,
+  ...ACTIVITIES_B,
   ...classActivities,
   { id: "rest_sofa", label: "Rest on the old sofa", description: "Free, if a little lumpy.", location: "common_room", minutes: 10, costPence: 0, needs: { energy: 18 }, cancelRule: NO_REFUND, event: "napped", anchor: "sofa" },
 ];
