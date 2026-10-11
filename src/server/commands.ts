@@ -13,6 +13,8 @@ import * as social from "./social";
 import * as market from "./market";
 import * as company from "./company";
 import * as playerJobs from "./playerJobs";
+import * as tables from "./tables";
+import * as civic from "./civic";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -85,6 +87,13 @@ const HANDLERS: Record<string, Handler> = {
   SubmitJob: playerJobs.submitJob as Handler,
   CompleteJob: playerJobs.completeJob as Handler,
   CancelJob: playerJobs.cancelJob as Handler,
+  CreateGameTable: tables.createGameTable as Handler,
+  JoinGameTable: tables.joinGameTable as Handler,
+  GameMove: tables.gameMove as Handler,
+  LeaveGameTable: tables.leaveGameTable as Handler,
+  Rematch: tables.rematch as Handler,
+  StandForElection: civic.standForElection as Handler,
+  CastVote: civic.castVote as Handler,
 };
 
 export interface CommandResult {
@@ -125,4 +134,8 @@ export function loadStateFor(accountId: string, now = new Date()) {
 /** Read-only social queries for the phone (search, profiles, threads, rankings, feed, light poll). */
 export function socialQueryFor(accountId: string, op: string, params: Record<string, unknown>, now = new Date()) {
   return withTx((tx) => social.socialQuery(tx, accountId, op, params, now));
+}
+
+export function loadTableFor(accountId: string, tableId: unknown, now = new Date()) {
+  return withTx((tx) => tables.loadTableFor(tx, accountId, tableId, now));
 }

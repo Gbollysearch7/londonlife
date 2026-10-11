@@ -6,6 +6,7 @@ import type { State } from "@/client/api";
 import { Celebrations, Dock, NeedsBar, ProgressStrip, Toasts, TopBar, Warnings } from "./Hud";
 import { HotspotCard } from "./HotspotCard";
 import { MinigameOverlay } from "./Minigame";
+import { TableOverlay } from "./Games";
 import { StoryPill } from "./Stories";
 import { CheckInModal } from "./Goals";
 import { initSound } from "@/client/sound";
@@ -124,6 +125,7 @@ export default function Game() {
         <Dock s={state} />
       </div>
       <MinigameOverlay s={state} />
+      <TableOverlay s={state} />
       <CheckInModal s={state} />
       <Toasts />
       <Celebrations />

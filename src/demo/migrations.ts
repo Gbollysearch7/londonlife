@@ -9,6 +9,7 @@ import m008 from "../../db/migrations/008_minigame_begin.sql";
 import m009 from "../../db/migrations/009_household.sql";
 import m010 from "../../db/migrations/010_social.sql";
 import m011 from "../../db/migrations/011_market.sql";
+import m012 from "../../db/migrations/012_games_civic.sql";
 
 /** Every migration, in order. Keep in sync with db/migrations. */
 export const MIGRATIONS: [string, string][] = [
@@ -23,6 +24,7 @@ export const MIGRATIONS: [string, string][] = [
   ["009_household.sql", m009],
   ["010_social.sql", m010],
   ["011_market.sql", m011],
+  ["012_games_civic.sql", m012],
 ];
 
 /** PGlite has gen_random_uuid built in; the pgcrypto extension line is dropped. */
