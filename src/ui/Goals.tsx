@@ -199,7 +199,7 @@ export function PeopleApp({ s }: { s: State }) {
   const setMapFocus = useGame((x) => x.setMapFocus);
   return (
     <>
-      <p className="tiny">These are named local characters (NPCs), not other players. Chat and spend time together to grow closer. Real players arrive with shared play.</p>
+      <p className="tiny">These are named local characters (NPCs), not other players. Chat and spend time together to grow closer. Real players are on the Players tab.</p>
       <ul className={styles.list}>
         {s.goals.friends.map((f) => (
           <li key={f.id} className={styles.action}>
