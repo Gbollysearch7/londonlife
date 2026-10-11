@@ -1,6 +1,7 @@
 import { ITEMS, RECIPES } from "./catalogue";
 import { CITY_ACTIVITIES, CITY_VENUES } from "./city";
 import { COURSES } from "./courses";
+import { PET_FOOD_ID, PRESTIGE_ACTIVITIES } from "./lateGame";
 import type { ActivityDef, LocationId, MissionDef, VenueDef } from "./types";
 
 export const VENUES: VenueDef[] = [
@@ -78,6 +79,9 @@ export const TRAVEL_MODES = {
   bus: { name: "Bus", farePence: 200, speed: 0.4, minMinutes: 2 },
   tube: { name: "Tube", farePence: 280, speed: 0.3, minMinutes: 4 },
   taxi: { name: "Taxi", farePence: 0, speed: 0.22, minMinutes: 3 },
+  // Owned vehicles (Milestone 5): offered only when you have a usable one where you are.
+  cycle: { name: "Cycle", farePence: 0, speed: 0.6, minMinutes: 1 },
+  drive: { name: "Drive", farePence: 300, speed: 0.32, minMinutes: 2 },
 } as const;
 export type TravelMode = keyof typeof TRAVEL_MODES;
 
@@ -99,8 +103,9 @@ export function walkMinutes(a: LocationId, b: LocationId, homeAt: [number, numbe
 }
 
 /** The Tube only serves trips between districts; short hops are walk or bus. Taxis go anywhere. */
-export function modesFor(a: LocationId, b: LocationId, homeAt: [number, number] = [0, 0]): TravelMode[] {
-  return walkMinutes(a, b, homeAt) >= 20 ? ["walk", "bus", "tube", "taxi"] : ["walk", "bus", "taxi"];
+export function modesFor(a: LocationId, b: LocationId, homeAt: [number, number] = [0, 0], owned: { cycle?: boolean; drive?: boolean } = {}): TravelMode[] {
+  const base: TravelMode[] = walkMinutes(a, b, homeAt) >= 20 ? ["walk", "bus", "tube", "taxi"] : ["walk", "bus", "taxi"];
+  return [...base, ...(owned.cycle ? (["cycle"] as const) : []), ...(owned.drive ? (["drive"] as const) : [])];
 }
 
 /** Taxi fare: £4 flag plus £1 per walking-equivalent five minutes (fictional). */
@@ -108,11 +113,12 @@ export function taxiFare(walk: number) {
   return 400 + Math.ceil(walk / 5) * 100;
 }
 
-export function journeyQuote(a: LocationId, b: LocationId, mode: TravelMode, homeAt: [number, number] = [0, 0]) {
+/** `vehicle` overrides speed, per-trip cost and label for an owned bicycle, scooter or car. */
+export function journeyQuote(a: LocationId, b: LocationId, mode: TravelMode, homeAt: [number, number] = [0, 0], vehicle?: { speed: number; tripPence: number; name: string }) {
   const m = TRAVEL_MODES[mode];
   const walk = walkMinutes(a, b, homeAt);
-  const minutes = Math.max(m.minMinutes, Math.round(walk * m.speed));
-  return { mode, name: m.name, farePence: mode === "taxi" ? taxiFare(walk) : m.farePence, minutes };
+  const minutes = Math.max(m.minMinutes, Math.round(walk * (vehicle?.speed ?? m.speed)));
+  return { mode, name: vehicle?.name ?? m.name, farePence: mode === "taxi" ? taxiFare(walk) : vehicle?.tripPence ?? m.farePence, minutes };
 }
 
 /** Is a venue open at this London hour? Hours may wrap past midnight (close > 24). */
@@ -216,6 +222,7 @@ export const ACTIVITIES: ActivityDef[] = [
   { id: "office_toilet", label: "Use the toilets", description: "", location: "city_office", minutes: 1, costPence: 0, needs: { bladder: 65 }, cancelRule: NO_REFUND, event: "toilet", anchor: "wc" },
   ...CITY_ACTIVITIES,
   ...classActivities,
+  ...PRESTIGE_ACTIVITIES,
   { id: "rest_sofa", label: "Rest on the old sofa", description: "Free, if a little lumpy.", location: "common_room", minutes: 10, costPence: 0, needs: { energy: 18 }, cancelRule: NO_REFUND, event: "napped", anchor: "sofa" },
 ];
 
@@ -223,8 +230,8 @@ export const activityDef = (id: string) => ACTIVITIES.find((a) => a.id === id);
 
 /** Grocery counters by venue. The market stocks ingredients the corner counter doesn't. */
 export const GROCERY_SHOPS: Partial<Record<LocationId, string[]>> = {
-  food_hall: ["bread", "beans", "pasta", "tomato", "tea", "eggs", "rice", "plantain", "snack_bar"],
-  borough_market: ["potato", "cheese", "chickpeas", "peppers", "tomato", "eggs", "rice", "plantain", "bread"],
+  food_hall: ["bread", "beans", "pasta", "tomato", "tea", "eggs", "rice", "plantain", "snack_bar", PET_FOOD_ID],
+  borough_market: ["potato", "cheese", "chickpeas", "peppers", "tomato", "eggs", "rice", "plantain", "bread", PET_FOOD_ID],
 };
 
 export const MISSIONS: MissionDef[] = [

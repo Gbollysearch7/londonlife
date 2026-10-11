@@ -19,6 +19,7 @@ import { wardrobeView } from "./wardrobe";
 import { conditionClearsAt, conditionDecay, healthView, setCondition, settleDeliveries, settleHealth } from "./health";
 import { classAttended, classBlocker, classesToday, courseRows, coursesView, type CourseRow } from "./courses";
 import { moodletForActivity, perkEffects } from "@/content/goals";
+import { garageFor, lateGameView, settleLateGame } from "./lateGame";
 
 // ───────────────────────────── rows ─────────────────────────────
 
@@ -247,9 +248,10 @@ export async function settle(tx: Tx, c: CharRow, now: Date) {
     c.location = j.destination;
     await emit(tx, c.id, "journey_arrived", { mode: j.mode, destination: j.destination }, now);
     const wx = weatherFor(londonDayKey(now)).id;
-    if (j.mode === "walk" && (wx === "rain" || wx === "drizzle") && (await grantMoodlet(tx, c, "soaked", "walk", now))) notices.push("You walked in the rain and got soaked.");
+    if ((j.mode === "walk" || j.mode === "cycle") && (wx === "rain" || wx === "drizzle") && (await grantMoodlet(tx, c, "soaked", "walk", now))) notices.push("You walked in the rain and got soaked.");
     notices.push(`Arrived at ${venue(j.destination)?.name}.`);
   }
+  notices.push(...(await settleLateGame(tx, c, now)));
   return notices;
 }
 
@@ -461,6 +463,9 @@ const REQUIREMENT_NAMES: Record<string, string> = {
   desk: "a desk",
   guitar: "a guitar",
   weights: "a dumbbell rack",
+  cinema: "a home cinema",
+  piano: "a grand piano",
+  workstation: "an advanced workstation",
 };
 const requirementName = (t: string) => REQUIREMENT_NAMES[t] ?? t;
 
@@ -576,8 +581,9 @@ export async function startJourney(tx: Tx, accountId: string, p: { destination: 
   if (ctx.running) throw new GameError("busy", "Finish or cancel what you're doing first.");
   if (ctx.shift) throw new GameError("on_shift", "You're on shift. Leave your shift before travelling.");
   const homeAt = HOME_DISTRICT_POS[ctx.home.home.district] ?? [0, 0];
-  if (!modesFor(c.location, p.destination, homeAt).includes(p.mode)) throw new GameError("bad_mode", "The Tube only runs between districts.");
-  const q = journeyQuote(c.location, p.destination, p.mode, homeAt);
+  const garage = await garageFor(tx, c, now);
+  if (!modesFor(c.location, p.destination, homeAt, garage.owned).includes(p.mode)) throw new GameError("bad_mode", garage.blocker(p.mode) ?? "The Tube only runs between districts.");
+  const q = journeyQuote(c.location, p.destination, p.mode, homeAt, garage.vehicle(p.mode));
   const id = crypto.randomUUID();
   await moveMoney(tx, c, -q.farePence, "travel", `${q.name} to ${venue(p.destination)!.name}`, { type: "journey", id });
   await tx.query(
@@ -585,7 +591,8 @@ export async function startJourney(tx: Tx, accountId: string, p: { destination: 
      VALUES ($1,$2,$3,$4,$5,$6,'in_transit',$7,$8)`,
     [id, c.id, c.location, p.destination, p.mode, q.farePence, now, new Date(now.getTime() + durationMs(q.minutes))],
   );
-  const how = { walk: "Walking", bus: "On the bus", tube: "On the Tube", taxi: "In a taxi" }[p.mode];
+  await garage.use(tx, p.mode, id, c.location);
+  const how = { walk: "Walking", bus: "On the bus", tube: "On the Tube", taxi: "In a taxi", cycle: "Cycling", drive: "Driving" }[p.mode];
   return { message: `${how} to ${venue(p.destination)!.name}.` };
 }
 
@@ -843,6 +850,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
   const ambition = AMBITIONS.find((x) => x.id === c.ambition)!;
 
   const goals = await goalsView(tx, c, now);
+  const garage = await garageFor(tx, c, now);
   const out = {
     now: now.toISOString(),
     timeScale: timeScale(),
@@ -905,7 +913,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
       access: v.access,
       npcs: v.npcs,
       here: c.location === v.id,
-      quotes: c.location === v.id ? [] : modesFor(c.location, v.id, HOME_DISTRICT_POS[ctx.home.home.district]).map((m) => journeyQuote(c.location, v.id, m, HOME_DISTRICT_POS[ctx.home.home.district])),
+      quotes: c.location === v.id ? [] : modesFor(c.location, v.id, HOME_DISTRICT_POS[ctx.home.home.district], garage.owned).map((m) => journeyQuote(c.location, v.id, m, HOME_DISTRICT_POS[ctx.home.home.district], garage.vehicle(m))),
     })),
     missions: {
       day: a.day,
@@ -940,6 +948,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     wardrobe: await wardrobeView(tx, c),
     ...(await healthView(tx, c)),
     ...(await economyView(tx, c, now)),
+    ...(await lateGameView(tx, c, now)),
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };
   out.character.ambition.progress = goals.ambition.progress;
