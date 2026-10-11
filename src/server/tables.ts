@@ -1,28 +1,18 @@
 import crypto from "node:crypto";
-import {
-  FOUR_IN_ROW,
-  MISSES_TO_FORFEIT,
-  OPEN_TABLE_MINUTES,
-  PRACTICE_NPC,
-  TURN_SECONDS,
-  aiMove,
-  autoMove,
-  drop,
-  emptyBoard,
-  landingRow,
-  other,
-  outcome,
-  type Seat,
-} from "@/content/fourInRow";
+import { FOUR_IN_ROW, MISSES_TO_FORFEIT, OPEN_TABLE_MINUTES, PRACTICE_NPC, TURN_SECONDS, other, type Seat } from "@/content/fourInRow";
+import { QUIET_MOVES_EACH, quietRun } from "@/content/draughts";
+import { TABLE_GAME_LIST, draughtsHints, tableGame, type MoveRecord, type TableGame } from "@/content/tableGames";
 import { hourLabel, isOpenAt, venue } from "@/content/world";
 import { londonHour } from "@/sim/time";
 import { GameError, type Tx } from "./db";
 import { emit, requireCharacter, settle, type CharRow } from "./game";
+import { recordLadder } from "./ladder";
 
 /**
  * Server-authoritative table games (spec ch. 22). Friendly only: no stakes, no payouts.
  * Every move is validated against the seat, the turn, the state version and the deadline.
  * Timeouts are settled lazily from the stored deadline, so the result never depends on who looks first.
+ * Each game's rules (Four in a Row, Draughts) plug in through the registry in src/content/tableGames.ts.
  */
 
 /** Venues with a games table. Extra venues are used only if they exist in this build. */
@@ -44,7 +34,7 @@ interface TableRow {
   board: string;
   turn: Seat;
   version: number;
-  moves: { seat: Seat; col: number; auto?: boolean }[];
+  moves: MoveRecord[];
   misses_a: number;
   misses_b: number;
   turn_deadline: Date | null;
@@ -58,6 +48,13 @@ interface TableRow {
   started_at: Date | null;
   finished_at: Date | null;
 }
+
+/** The rules of the game on a table. */
+const rulesOf = (t: Pick<TableRow, "game">): TableGame => {
+  const g = tableGame(t.game);
+  if (!g) throw new GameError("bad_game", "That game isn't available yet.");
+  return g;
+};
 
 const seatOf = (t: TableRow, charId: string): Seat | null => (t.seat_a === charId ? "a" : t.seat_b === charId ? "b" : null);
 
@@ -103,28 +100,32 @@ async function finish(tx: Tx, t: TableRow, winner: Seat | "draw", reason: string
       [t.id, me, t.game, result, reason, n[them] ?? "Someone", at],
     );
   }
+  await recordLadder(tx, t, winner, n, at);
 }
 
 /** Applies one move for `seat`; finishes the game if it ends it. Caller has validated the move. */
-async function applyMove(tx: Tx, t: TableRow, seat: Seat, col: number, at: Date, auto = false) {
-  const d = drop(t.board, col, seat)!;
-  t.board = d.board;
-  t.moves = [...t.moves, auto ? { seat, col, auto: true } : { seat, col }];
+async function applyMove(tx: Tx, t: TableRow, seat: Seat, move: unknown, at: Date, auto = false) {
+  const g = rulesOf(t);
+  const r = g.play(t.board, seat, move)!;
+  t.board = r.board;
+  t.moves = [...t.moves, auto ? { seat, ...r.record, auto: true } : { seat, ...r.record }];
   t.version += 1;
   t.turn = other(seat);
   t.turn_deadline = new Date(at.getTime() + TURN_MS);
-  const end = outcome(t.board);
-  if (end) await finish(tx, t, end.winner, end.winner === "draw" ? "draw" : "four", end.line, at);
+  const end = g.end(t.board, t.turn, t.moves);
+  if (end) await finish(tx, t, end.winner, end.reason, end.line, at);
 }
 
 /** The practice opponent replies immediately. */
 async function npcReply(tx: Tx, t: TableRow, at: Date) {
-  if (t.mode === "practice" && t.status === "active" && t.turn === "b") await applyMove(tx, t, "b", aiMove(t.board, "b"), at);
+  if (t.mode !== "practice" || t.status !== "active" || t.turn !== "b") return;
+  const m = rulesOf(t).aiMove(t.board, "b");
+  if (m !== null) await applyMove(tx, t, "b", m, at);
 }
 
 /**
  * Brings a locked table up to `now`: expires an unjoined table, then works through missed turns in order.
- * A first miss drops a counter in the most central column; a second miss in a row forfeits.
+ * A first miss plays the game's automatic move (Four in a Row: the most central column); a second miss in a row forfeits.
  */
 async function settleTable(tx: Tx, t: TableRow, now: Date): Promise<boolean> {
   let changed = false;
@@ -146,7 +147,9 @@ async function settleTable(tx: Tx, t: TableRow, now: Date): Promise<boolean> {
       await finish(tx, t, other(seat), "timeout", null, at);
       break;
     }
-    await applyMove(tx, t, seat, autoMove(t.board), at, true);
+    const auto = rulesOf(t).autoMove(t.board, seat);
+    if (auto === null) break;
+    await applyMove(tx, t, seat, auto, at, true);
     await npcReply(tx, t, at);
   }
   if (changed) await save(tx, t);
@@ -184,7 +187,8 @@ function busyError(t: TableRow) {
 export async function createGameTable(tx: Tx, accountId: string, p: { mode?: string; game?: string }, now: Date) {
   const c = await requireCharacter(tx, accountId);
   await settle(tx, c, now);
-  if ((p.game ?? FOUR_IN_ROW.id) !== FOUR_IN_ROW.id) throw new GameError("bad_game", "That game isn't available yet.");
+  const g = tableGame(p.game === undefined ? FOUR_IN_ROW.id : typeof p.game === "string" ? p.game : "");
+  if (!g) throw new GameError("bad_game", "That game isn't available yet.");
   const mode = p.mode === "practice" ? "practice" : p.mode === "friendly" || p.mode === undefined ? "friendly" : null;
   if (!mode) throw new GameError("bad_mode", "Choose a friendly table or practice.");
   const busy = await busyAt(tx, c, now);
@@ -194,19 +198,19 @@ export async function createGameTable(tx: Tx, accountId: string, p: { mode?: str
     await tx.query(
       `INSERT INTO game_tables (id, game, mode, venue, status, seat_a, board, turn, turn_deadline, created_at, started_at)
        VALUES ($1,$2,'practice',$3,'active',$4,$5,'a',$6,$7,$7)`,
-      [id, FOUR_IN_ROW.id, c.location, c.id, emptyBoard(), new Date(now.getTime() + TURN_MS), now],
+      [id, g.id, c.location, c.id, g.emptyBoard(), new Date(now.getTime() + TURN_MS), now],
     );
-    return { message: `Practice game started against ${PRACTICE_NPC.label}. You go first.`, tableId: id };
+    return { message: `Practice ${g.name} started against ${PRACTICE_NPC.label}. You go first.`, tableId: id };
   }
   const where = tableVenues().includes(c.location) ? c.location : tableVenues()[0];
   await requireAtTableVenue(tx, c, where, now);
   await tx.query(
     `INSERT INTO game_tables (id, game, mode, venue, status, seat_a, board, turn, open_until, created_at)
      VALUES ($1,$2,'friendly',$3,'open',$4,$5,'a',$6,$7)`,
-    [id, FOUR_IN_ROW.id, where, c.id, emptyBoard(), new Date(now.getTime() + OPEN_MS), now],
+    [id, g.id, where, c.id, g.emptyBoard(), new Date(now.getTime() + OPEN_MS), now],
   );
-  await emit(tx, c.id, "table_opened", { game: FOUR_IN_ROW.id }, now);
-  return { message: `Table open at ${venue(where)!.name}. Waiting for someone to join.`, tableId: id };
+  await emit(tx, c.id, "table_opened", { game: g.id }, now);
+  return { message: `${g.name} table open at ${venue(where)!.name}. Waiting for someone to join.`, tableId: id };
 }
 
 export async function joinGameTable(tx: Tx, accountId: string, p: { tableId: string }, now: Date) {
@@ -232,7 +236,7 @@ export async function joinGameTable(tx: Tx, accountId: string, p: { tableId: str
   return { message: `You sat down with ${n[t.seat_a] ?? "your opponent"}. ${seatOf(t, c.id) === t.turn ? "Your move." : "They go first."}`, tableId: t.id };
 }
 
-export async function gameMove(tx: Tx, accountId: string, p: { tableId: string; column: number; version: number }, now: Date) {
+export async function gameMove(tx: Tx, accountId: string, p: { tableId: string; version: number; column?: number; path?: number[] }, now: Date) {
   const c = await requireCharacter(tx, accountId);
   await settle(tx, c, now);
   const t = await lockTable(tx, p.tableId);
@@ -243,17 +247,18 @@ export async function gameMove(tx: Tx, accountId: string, p: { tableId: string; 
   if (t.status !== "active") throw new GameError("game_over", "That game has finished.");
   if (t.turn !== seat) throw new GameError("not_your_turn", "It's not your turn.");
   if (!Number.isInteger(p.version) || p.version !== t.version) throw new GameError("stale", "The board changed — here's the latest position.");
-  const col = Number(p.column);
-  if (!Number.isInteger(col) || landingRow(t.board, col) < 0) throw new GameError("illegal_move", "That column is full or doesn't exist.");
+  const g = rulesOf(t);
+  const move = g.parseMove(p as unknown as Record<string, unknown>);
+  if (move === null || !g.play(t.board, seat, move)) throw new GameError("illegal_move", g.illegalText(t.board, seat, move));
   if (seat === "a") t.misses_a = 0;
   else t.misses_b = 0;
-  await applyMove(tx, t, seat, col, now);
+  await applyMove(tx, t, seat, move, now);
   await npcReply(tx, t, now);
   await save(tx, t);
   // Re-read: the move above may have ended the game.
   if ((t.status as TableRow["status"]) === "finished") {
     await emit(tx, c.id, "table_game_finished", { game: t.game, mode: t.mode }, now);
-    const msg = t.winner === "draw" ? "It's a draw." : t.winner === seat ? "Four in a row — you win!" : t.mode === "practice" ? `${PRACTICE_NPC.name} wins this time.` : "They win this time.";
+    const msg = t.winner === "draw" ? "It's a draw." : t.winner === seat ? (t.game === FOUR_IN_ROW.id ? "Four in a row — you win!" : "You win!") : t.mode === "practice" ? `${PRACTICE_NPC.name} wins this time.` : "They win this time.";
     return { message: msg, tableId: t.id };
   }
   return { message: "", tableId: t.id };
@@ -296,7 +301,7 @@ export async function rematch(tx: Tx, accountId: string, p: { tableId: string },
   if (t.status !== "finished") throw new GameError("not_finished", "Finish this game first.");
   if (t.mode === "practice") {
     if (busy) throw busyError(busy);
-    return createGameTable(tx, accountId, { mode: "practice" }, now);
+    return createGameTable(tx, accountId, { mode: "practice", game: t.game }, now);
   }
   if (t.rematch_id) {
     const next = await lockTable(tx, t.rematch_id);
@@ -310,7 +315,7 @@ export async function rematch(tx: Tx, accountId: string, p: { tableId: string },
     `INSERT INTO game_tables (id, game, mode, venue, status, seat_a, reserved_for, board, turn, open_until, rematch_of, created_at)
      VALUES ($1,$2,'friendly',$3,'open',$4,$5,$6,$7,$8,$9,$10)`,
     // The new table's seat "a" is you; if you moved first last time, they move first now.
-    [id, t.game, t.venue, c.id, opponent, emptyBoard(), seat === "a" ? "b" : "a", new Date(now.getTime() + OPEN_MS), t.id, now],
+    [id, t.game, t.venue, c.id, opponent, rulesOf(t).emptyBoard(), seat === "a" ? "b" : "a", new Date(now.getTime() + OPEN_MS), t.id, now],
   );
   t.rematch_id = id;
   t.version += 1;
@@ -320,7 +325,7 @@ export async function rematch(tx: Tx, accountId: string, p: { tableId: string },
 
 // ─────────────────────────── views ───────────────────────────
 
-/** Public state of one table: anyone may watch. This game has no hidden information. */
+/** Public state of one table: anyone may watch. These games have no hidden information. */
 export async function tableView(tx: Tx, c: Pick<CharRow, "id">, tableId: unknown, now: Date) {
   const t = await lockTable(tx, tableId);
   await settleTable(tx, t, now);
@@ -332,11 +337,18 @@ export async function tableView(tx: Tx, c: Pick<CharRow, "id">, tableId: unknown
     return { seat: s, name: id ? n[id] ?? "Player" : t.reserved_for ? `Waiting for ${n[t.reserved_for] ?? "opponent"}` : "Open seat", npc: false, you: !!id && id === c.id, misses: s === "a" ? t.misses_a : t.misses_b };
   };
   const last = t.moves[t.moves.length - 1] ?? null;
+  const g = rulesOf(t);
   return {
     id: t.id,
     game: t.game,
-    gameName: FOUR_IN_ROW.name,
-    rules: FOUR_IN_ROW.rules,
+    gameName: g.name,
+    rules: g.rules,
+    /** Draughts: the legal paths for the player to move (public information), so the board can guide a tap. */
+    hints: t.game === "draughts" && t.status === "active" ? draughtsHints(t.board, t.turn) : null,
+    /** Draughts: moves in a row with no capture and no man moving, towards the draw rule. */
+    quietMoves: t.game === "draughts" ? quietRun(t.moves as { progress?: boolean }[]) : null,
+    quietLimit: t.game === "draughts" ? QUIET_MOVES_EACH * 2 : null,
+    reasonLabel: t.end_reason ? g.reasonLabel[t.end_reason] ?? t.end_reason : null,
     mode: t.mode,
     venue: venue(t.venue)?.name ?? t.venue,
     status: t.status,
@@ -389,15 +401,52 @@ export async function gamesView(tx: Tx, c: CharRow, now: Date) {
   const count = (o: string) => Number(rec.find((r) => r.outcome === o)?.n ?? 0);
   const recent = (await tx.query("SELECT * FROM game_results WHERE character_id = $1 ORDER BY finished_at DESC LIMIT 5", [c.id])).rows;
   const practiceWins = (await tx.query("SELECT COUNT(*)::int AS n FROM game_tables WHERE mode = 'practice' AND seat_a = $1 AND winner = 'a'", [c.id])).rows[0].n;
+  const gameName = (id: string) => tableGame(id)?.name ?? id;
   return {
     games: {
-      available: [{ id: FOUR_IN_ROW.id, name: FOUR_IN_ROW.name, rules: FOUR_IN_ROW.rules }],
+      available: TABLE_GAME_LIST.map((g) => ({ id: g.id, name: g.name, blurb: g.blurb, rules: g.rules })),
       venues: tableVenues().map((id) => ({ id, name: venue(id)!.name, here: c.location === id })),
-      mine: busy ? { id: busy.id, status: busy.status, mode: busy.mode } : null,
-      open: open.map((t) => ({ id: t.id, host: n[t.seat_a] ?? "Player", venue: venue(t.venue)?.name ?? t.venue, venueId: t.venue, rematch: !!t.reserved_for, here: c.location === t.venue })),
-      live: live.map((t) => ({ id: t.id, players: [n[t.seat_a] ?? "Player", n[t.seat_b!] ?? "Player"], venue: venue(t.venue)?.name ?? t.venue, moves: (t.moves ?? []).length })),
+      mine: busy ? { id: busy.id, status: busy.status, mode: busy.mode, game: busy.game } : null,
+      open: open.map((t) => ({ id: t.id, game: t.game, gameName: gameName(t.game), host: n[t.seat_a] ?? "Player", venue: venue(t.venue)?.name ?? t.venue, venueId: t.venue, rematch: !!t.reserved_for, here: c.location === t.venue })),
+      live: live.map((t) => ({ id: t.id, game: t.game, gameName: gameName(t.game), players: [n[t.seat_a] ?? "Player", n[t.seat_b!] ?? "Player"], venue: venue(t.venue)?.name ?? t.venue, moves: (t.moves ?? []).length })),
       record: { wins: count("win"), losses: count("loss"), draws: count("draw"), practiceWins: Number(practiceWins) },
-      recent: recent.map((r) => ({ tableId: String(r.table_id), outcome: String(r.outcome), reason: String(r.reason), opponent: String(r.opponent_name), at: new Date(r.finished_at).toISOString() })),
+      recent: recent.map((r) => ({
+        tableId: String(r.table_id),
+        game: String(r.game),
+        gameName: gameName(String(r.game)),
+        outcome: String(r.outcome),
+        reason: String(r.reason),
+        reasonLabel: tableGame(String(r.game))?.reasonLabel[String(r.reason)] ?? String(r.reason),
+        opponent: String(r.opponent_name),
+        at: new Date(r.finished_at).toISOString(),
+      })),
+      here: await liveHere(tx, c),
     },
+  };
+}
+
+/**
+ * The game in progress at your current venue, for the 3D games table: a friendly game if there is one,
+ * otherwise a practice game being played here. Public board state only.
+ */
+async function liveHere(tx: Tx, c: CharRow) {
+  if (!tableVenues().includes(c.location)) return null;
+  const t = (
+    await tx.query(
+      `SELECT * FROM game_tables WHERE venue = $1 AND status = 'active' ORDER BY (mode = 'friendly') DESC, started_at DESC LIMIT 1`,
+      [c.location],
+    )
+  ).rows[0] as TableRow | undefined;
+  if (!t) return null;
+  const n = await names(tx, [t.seat_a, t.seat_b]);
+  return {
+    id: t.id,
+    game: t.game,
+    gameName: tableGame(t.game)?.name ?? t.game,
+    board: t.board,
+    turn: t.turn,
+    mode: t.mode,
+    players: [n[t.seat_a] ?? "Player", t.mode === "practice" ? PRACTICE_NPC.label : n[t.seat_b!] ?? "Player"],
+    yours: t.seat_a === c.id || t.seat_b === c.id,
   };
 }

@@ -382,6 +382,7 @@ export const LAYOUTS: Record<string, VenueLayout> = {
       { t: "dartboard", p: [-0.9, -4.45] },
       { t: "round_table", p: [0.6, 1.4] },
       { t: "cafe_table", p: [3.8, 2.4], c: "#5a3f2a" },
+      { t: "game_table", p: [4.4, -0.1] },
       { t: "sign", p: [2.6, -4.47], text: "The Last Stop", y: 3.0, w: 3.2, h: 0.55, c: "#5a1e24" },
       { t: "pendant", p: [0.6, 1.4], c: "#5a1e24" },
       { t: "pendant", p: [-4.7, -0.2], c: "#5a1e24" },

@@ -28,6 +28,7 @@ import { isListed, marketView, settleShared } from "./market";
 import { policyActivityCost, policyGroceryPrice, policyQuote, policyVenue, type PolicyId } from "@/content/civic";
 import { civicView, currentPolicy } from "./civic";
 import { gamesView } from "./tables";
+import { ladderView } from "./ladder";
 import { garageFor, lateGameView, settleLateGame } from "./lateGame";
 import { galleryView } from "./venues_a";
 import { familyView } from "./family";
@@ -990,6 +991,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     ...(await socialView(tx, c, now)),
     ...(await marketView(tx, c, now)),
     ...(await gamesView(tx, c, now)),
+    ...(await ladderView(tx, c, now)),
     ...(await civicView(tx, c, now)),
     ...(await lateGameView(tx, c, now)),
     ...(await galleryView(tx, c, now)),

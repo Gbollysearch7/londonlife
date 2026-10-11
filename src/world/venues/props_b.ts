@@ -15,6 +15,7 @@ export const PROP_TYPES_B = [
   "ballot_booth",
   "podium",
   "van",
+  "game_table",
 ] as const;
 export type PropTypeB = (typeof PROP_TYPES_B)[number];
 
@@ -44,6 +45,8 @@ export function propBlockB(s: Pick<PropSpec, "w" | "d"> & { t: PropTypeB }): [nu
       return [0.6, 0.5];
     case "van":
       return [s.w ?? 3.6, 1.8];
+    case "game_table":
+      return [1.7, 1.0];
     case "goal":
     case "golf_flag":
     case "plane":

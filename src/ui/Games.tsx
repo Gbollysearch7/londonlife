@@ -6,8 +6,11 @@ import { serverNow, useGame } from "@/client/store";
 import { COLS, ROWS } from "@/content/fourInRow";
 import type { TableView } from "@/server/tables";
 import { countdown } from "./format";
+import { DraughtsBoard, DraughtsDot } from "./DraughtsBoard";
+import { LadderSection } from "./Ladder";
 import styles from "./ui.module.css";
 import g from "./games.module.css";
+import d from "./draughts.module.css";
 
 /** Which table's board is open on screen (local presentation state only). */
 interface TableUi {
@@ -83,7 +86,7 @@ function Board({ tableId }: { tableId: string }) {
   }, [yourTurn]);
 
   const drop = async (col: number) => {
-    if (!t || !t.yourTurn || pending) return;
+    if (!t || !t.yourTurn || pending || t.game !== "four_in_row") return;
     if (t.board[(ROWS - 1) * COLS + col] !== ".") return;
     await run("GameMove", { tableId: t.id, column: col, version: t.version }, "move");
     await load();
@@ -124,8 +127,10 @@ function Board({ tableId }: { tableId: string }) {
         ? "This table closed before the game started."
         : t.status === "finished"
           ? t.winner === "draw"
-            ? "Full board — it's a draw."
-            : `${winner?.you ? "You win" : `${winner?.name} wins`}${t.endReason === "timeout" ? ", on missed turns" : t.endReason === "resigned" ? ", by resignation" : ""}.`
+            ? t.endReason === "forty_moves"
+              ? "Drawn: 40 moves each with no capture and no man moving."
+              : "Full board — it's a draw."
+            : `${winner?.you ? "You win" : `${winner?.name} wins`}${t.endReason === "timeout" ? ", on missed turns" : t.endReason === "resigned" ? ", by resignation" : t.endReason === "no_moves" ? ": no moves left for the other side" : ""}.`
           : t.yourTurn
             ? "Your move."
             : t.spectating
@@ -133,8 +138,9 @@ function Board({ tableId }: { tableId: string }) {
               : `Waiting for ${turnPlayer.name}…`;
   const rows = Array.from({ length: ROWS }, (_, i) => ROWS - 1 - i);
   const win = new Set(t.winLine ?? []);
-  const lastIndex = t.lastMove ? (() => {
-    for (let r = ROWS - 1; r >= 0; r--) if (t.board[r * COLS + t.lastMove!.col] !== ".") return r * COLS + t.lastMove!.col;
+  const lastCol = typeof t.lastMove?.col === "number" ? t.lastMove.col : null;
+  const lastIndex = lastCol !== null ? (() => {
+    for (let r = ROWS - 1; r >= 0; r--) if (t.board[r * COLS + lastCol] !== ".") return r * COLS + lastCol;
     return -1;
   })() : -1;
 
@@ -156,7 +162,7 @@ function Board({ tableId }: { tableId: string }) {
         <ul className={g.ftPlayers}>
           {t.players.map((p) => (
             <li key={p.seat} className={`${g.ftPlayer} ${t.status === "active" && t.turn === p.seat ? g.ftPlayerOn : ""}`}>
-              <span className={`${g.ftDot} ${p.seat === "a" ? g.ftRed : g.ftGold}`} aria-hidden />
+              {t.game === "draughts" ? <DraughtsDot seat={p.seat} /> : <span className={`${g.ftDot} ${p.seat === "a" ? g.ftRed : g.ftGold}`} aria-hidden />}
               <span>
                 <strong>{p.you ? `${p.name} (you)` : p.name}</strong>
                 {p.npc && <span className="chip">Computer player</span>}
@@ -177,6 +183,17 @@ function Board({ tableId }: { tableId: string }) {
           )}
         </div>
 
+        {t.game === "draughts" ? (
+          <DraughtsBoard
+            t={t}
+            busy={!!pending}
+            onClose={close}
+            onMove={async (path) => {
+              await run("GameMove", { tableId: t.id, path, version: t.version }, "move");
+              await load();
+            }}
+          />
+        ) : (
         <div
           ref={boardRef}
           className={g.ftBoard}
@@ -215,7 +232,8 @@ function Board({ tableId }: { tableId: string }) {
             );
           })}
         </div>
-        {yourTurn && <p className="tiny">Tap a column, or use ← → and Enter (or keys 1–7).</p>}
+        )}
+        {yourTurn && t.game === "four_in_row" && <p className="tiny">Tap a column, or use ← → and Enter (or keys 1–7).</p>}
         {err && <p className="err">{err} Retrying…</p>}
 
         <div className={g.ftFoot}>
@@ -281,9 +299,11 @@ export function GamesApp({ s }: { s: State }) {
   const setSheet = useGame((x) => x.setSheet);
   const openTable = useTableUi((x) => x.open);
   const gm = s.games;
+  const [pick, setPick] = useState(gm.available[0].id);
+  const game = gm.available.find((x) => x.id === pick) ?? gm.available[0];
   const here = gm.venues.find((v) => v.here);
   const start = async (mode: "friendly" | "practice") => {
-    const r = await run("CreateGameTable", { mode }, mode);
+    const r = await run("CreateGameTable", { mode, game: game.id }, mode);
     const id = r && (r as { tableId?: string }).tableId;
     if (id) openTable(id);
   };
@@ -292,17 +312,27 @@ export function GamesApp({ s }: { s: State }) {
       <section className={styles.workCard}>
         <div className={styles.workRow}>
           <div>
-            <span className="tiny">Friendly table game · no stakes</span>
-            <h3 style={{ fontSize: 22 }}>Four in a Row</h3>
+            <span className="tiny">Friendly table games · no stakes</span>
+            <h3 style={{ fontSize: 22 }}>{game.name}</h3>
           </div>
           <span className="chip">
             {gm.record.wins}W · {gm.record.losses}L · {gm.record.draws}D
           </span>
         </div>
-        <p className={styles.actionDesc}>Drop counters into a 7 × 6 grid. Line up four across, down or diagonally to win.</p>
+        <div className={d.drPicker} role="radiogroup" aria-label="Choose a game">
+          {gm.available.map((x) => (
+            <button key={x.id} role="radio" aria-checked={x.id === game.id} className={`${d.drPick} ${x.id === game.id ? d.drPickOn : ""}`} onClick={() => setPick(x.id)}>
+              {x.name}
+            </button>
+          ))}
+        </div>
+        <p className={styles.actionDesc}>{game.blurb}</p>
         {gm.mine ? (
           <>
-            <p className="tiny">{gm.mine.status === "open" ? "Your table is waiting for an opponent." : "You have a game in progress."}</p>
+            <p className="tiny">
+              {gm.mine.status === "open" ? "Your table is waiting for an opponent" : "You have a game in progress"}
+              {gm.mine.game ? ` (${gm.available.find((x) => x.id === gm.mine!.game)?.name ?? gm.mine.game})` : ""}.
+            </p>
             <button className="btn small" onClick={() => openTable(gm.mine!.id)}>
               Open board
             </button>
@@ -319,14 +349,14 @@ export function GamesApp({ s }: { s: State }) {
               </button>
             )}
             <button className="btn small secondary" disabled={!!pending} onClick={() => start("practice")}>
-              Practise against Sam (NPC)
+              Practise {game.name} against Sam (NPC)
             </button>
           </div>
         )}
         <details>
           <summary className="tiny">Rules</summary>
           <ul className="tiny">
-            {gm.available[0].rules.map((r) => (
+            {game.rules.map((r) => (
               <li key={r}>{r}</li>
             ))}
           </ul>
@@ -340,7 +370,9 @@ export function GamesApp({ s }: { s: State }) {
             <li key={o.id} className={styles.action}>
               <div className={styles.actionMain}>
                 <strong>{o.rematch ? `${o.host} wants a rematch` : `${o.host}'s table`}</strong>
-                <span className="tiny">{o.venue}</span>
+                <span className="tiny">
+                  {o.gameName} · {o.venue}
+                </span>
                 {!o.here && !o.rematch && <p className={styles.reason}>Go to {o.venue} to join.</p>}
               </div>
               <button
@@ -370,7 +402,7 @@ export function GamesApp({ s }: { s: State }) {
                   {l.players[0]} v {l.players[1]}
                 </strong>
                 <span className="tiny">
-                  {l.venue} · {l.moves} moves
+                  {l.gameName} · {l.venue} · {l.moves} moves
                 </span>
               </div>
               <button className="btn small secondary" onClick={() => openTable(l.id)}>
@@ -390,8 +422,10 @@ export function GamesApp({ s }: { s: State }) {
             {gm.recent.map((r) => (
               <li key={r.tableId}>
                 <div>
-                  <strong>v {r.opponent}</strong>
-                  <span className="tiny">{r.reason === "timeout" ? "missed turns" : r.reason === "resigned" ? "resignation" : r.reason === "draw" ? "full board" : "four in a row"}</span>
+                  <strong>
+                    {r.gameName} v {r.opponent}
+                  </strong>
+                  <span className="tiny">{r.reasonLabel}</span>
                 </div>
                 <span className={r.outcome === "win" ? styles.pos : r.outcome === "loss" ? styles.neg : ""}>{r.outcome === "win" ? "Won" : r.outcome === "loss" ? "Lost" : "Draw"}</span>
               </li>
@@ -399,8 +433,9 @@ export function GamesApp({ s }: { s: State }) {
           </ul>
         </>
       )}
+      <LadderSection s={s} />
       <p className="tiny" style={{ marginTop: 12 }}>
-        Practice wins against Sam: {gm.record.practiceWins}. Sam is a computer-controlled character, not a real player.
+        Practice wins against Sam: {gm.record.practiceWins}. Sam is a computer-controlled character, not a real player, and practice never counts on the ladder.
       </p>
     </>
   );

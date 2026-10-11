@@ -13,6 +13,7 @@ import m012 from "../../db/migrations/012_games_civic.sql";
 import m013 from "../../db/migrations/013_late_game.sql";
 import m014 from "../../db/migrations/014_family.sql";
 import m015 from "../../db/migrations/015_property.sql";
+import m016 from "../../db/migrations/016_games2.sql";
 
 /** Every migration, in order. Keep in sync with db/migrations. */
 export const MIGRATIONS: [string, string][] = [
@@ -31,6 +32,7 @@ export const MIGRATIONS: [string, string][] = [
   ["013_late_game.sql", m013],
   ["014_family.sql", m014],
   ["015_property.sql", m015],
+  ["016_games2.sql", m016],
 ];
 
 /** PGlite has gen_random_uuid built in; the pgcrypto extension line is dropped. */
