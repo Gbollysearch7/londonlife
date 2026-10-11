@@ -34,7 +34,7 @@ export async function sendCommand(type: string, payload: unknown = {}) {
   let lastErr: unknown;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      return (await postJson("/api/command", { key, type, payload })) as { receipt: { message?: string }; replayed: boolean; state: GameState };
+      return (await postJson("/api/command", { key, type, payload })) as { receipt: { message?: string; result?: unknown }; replayed: boolean; state: GameState };
     } catch (err) {
       lastErr = err;
       if (err instanceof ApiError && err.code !== "network" && err.code !== "server_error") throw err;

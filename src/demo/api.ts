@@ -45,7 +45,7 @@ export async function sendCommand(type: string, payload: unknown = {}) {
     const result = await runCommand(localAccountId(), crypto.randomUUID(), type, payload);
     const state = await loadStateFor(localAccountId());
     void saveNow();
-    return wire({ ...result, state }) as { receipt: { message?: string }; replayed: boolean; state: GameState };
+    return wire({ ...result, state }) as { receipt: { message?: string; result?: unknown }; replayed: boolean; state: GameState };
   } catch (err) {
     throw toApiError(err);
   }

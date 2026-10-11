@@ -457,3 +457,35 @@ function scheduleMusic() {
   };
   playBar();
 }
+
+/** Plays a guide melody for a rhythm round: one soft note per beat-map note plus a kick on each beat. */
+export function scheduleSong(notes: { t: number; lane: number }[], bpm: number, startInMs: number): () => void {
+  if (!ctx || settings.muted) return () => {};
+  const t0 = ctx.currentTime + startInMs / 1000;
+  const lanes = [392, 523.3, 659.3];
+  const oscs: OscillatorNode[] = [];
+  const add = (freq: number, at: number, dur: number, type: OscillatorType, vol: number, bus: GainNode) => {
+    const o = ctx!.createOscillator();
+    const g = ctx!.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(vol, at + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.connect(g).connect(bus);
+    o.start(at);
+    o.stop(at + dur + 0.02);
+    oscs.push(o);
+  };
+  for (const n of notes) add(lanes[n.lane] ?? 440, t0 + n.t / 1000, 0.18, "triangle", 0.05, musicBus);
+  const beat = 60 / bpm;
+  const end = notes.length ? notes[notes.length - 1].t / 1000 + 1 : 0;
+  for (let b = 0; b * beat < end; b++) add(110, t0 + b * beat, 0.2, "sine", 0.18, sfxBus);
+  return () => oscs.forEach((o) => {
+    try {
+      o.stop();
+    } catch {
+      /* already finished */
+    }
+  });
+}

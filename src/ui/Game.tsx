@@ -5,6 +5,7 @@ import { useGame } from "@/client/store";
 import type { State } from "@/client/api";
 import { Celebrations, Dock, NeedsBar, ProgressStrip, Toasts, TopBar, Warnings } from "./Hud";
 import { HotspotCard } from "./HotspotCard";
+import { MinigameOverlay } from "./Minigame";
 import { initSound } from "@/client/sound";
 import { useScene } from "@/world/sceneStore";
 import { ActionsSheet, BuySheet, MapSheet, NeedsSheet, PlacementBar } from "./Sheets";
@@ -117,6 +118,7 @@ export default function Game() {
         {placement ? <PlacementBar s={state} /> : state.shift ? <ShiftPanel s={state} shift={state.shift} /> : <ProgressStrip s={state} />}
         <Dock s={state} />
       </div>
+      <MinigameOverlay s={state} />
       <Toasts />
       <Celebrations />
       {sheet === "actions" && <ActionsSheet s={state} />}

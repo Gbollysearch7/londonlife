@@ -1,6 +1,7 @@
 import { GameError, withTx, type Tx } from "./db";
 import * as game from "./game";
 import * as careers from "./careers";
+import * as minigames from "./minigames";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -22,6 +23,7 @@ const HANDLERS: Record<string, Handler> = {
   SetWorkStyle: careers.setWorkStyle as Handler,
   SubmitWorkTask: careers.submitWorkTask as Handler,
   LeaveShift: careers.leaveShift as Handler,
+  SubmitMinigame: minigames.submitMinigame as Handler,
 };
 
 export interface CommandResult {

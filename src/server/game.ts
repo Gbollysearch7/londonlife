@@ -11,6 +11,7 @@ import { assignMissions, layoutStarterHome, missionProgress, pickOrigin, swapMis
 import { durationMs, londonClock, londonDayKey, londonHour, timeScale } from "@/sim/time";
 import { GameError, type Tx } from "./db";
 import { careerView, settleDueShift } from "./careers";
+import { MINIGAME_WINDOW_MS, createRun, minigameView } from "./minigames";
 
 // ───────────────────────────── rows ─────────────────────────────
 
@@ -186,7 +187,7 @@ function activityMinutes(def: ActivityDef, home: HomeCtx) {
  * Brings a locked character up to `now`: needs decay, then any finished activity, then any arrived journey.
  * Safe to run on every request; each step is conditional on persisted status, so nothing settles twice.
  */
-async function settle(tx: Tx, c: CharRow, now: Date) {
+export async function settle(tx: Tx, c: CharRow, now: Date) {
   const result = settleNeeds({ needs: c.needs, settledAt: c.needs_settled_at, now, traits: c.traits, createdAt: c.created_at });
   c.needs = result.needs;
   const notices: string[] = [];
@@ -219,14 +220,31 @@ async function settle(tx: Tx, c: CharRow, now: Date) {
   return notices;
 }
 
-async function completeActivity(tx: Tx, c: CharRow, row: Record<string, unknown>, now: Date): Promise<string[]> {
+/** Extra outcome from a minigame, applied in the same settlement as the activity itself. */
+export interface MinigameBonus {
+  xpMult: number;
+  pence: number;
+  rep: number;
+  stars: number;
+  label: string;
+  incomeLabel: string;
+}
+
+export async function completeActivity(tx: Tx, c: CharRow, row: Record<string, unknown>, now: Date, bonus?: MinigameBonus): Promise<string[]> {
   const def = activityDef(row.def_id as string)!;
   const claimed = await tx.query(
     "UPDATE activities SET status = 'completed', settled_at = $2 WHERE id = $1 AND status = 'running' RETURNING id",
     [row.id, now],
   );
   if (!claimed.rowCount) return [];
+  if (def.minigame && !bonus) {
+    // The timer ran out before the minigame was played: nothing is earned (stated in the cancel rule).
+    await tx.query("UPDATE minigame_runs SET status = 'expired' WHERE activity_id = $1 AND status = 'open'", [row.id]);
+    await tx.query("UPDATE activities SET result = $2 WHERE id = $1", [row.id, { summary: ["no-show"], paid: 0, xp: null }]);
+    return [`${def.label}: time ran out before you played, so nothing was earned.`];
+  }
   const parts: string[] = [];
+  if (bonus) parts.push(bonus.label);
   const home = await homeContext(tx, c);
 
   const mult = def.id === "sleep" && home.bestBed >= 2 ? { energy: 1.1 } : {};
@@ -251,9 +269,21 @@ async function completeActivity(tx: Tx, c: CharRow, row: Record<string, unknown>
     await changeItems(tx, c.id, def.produces, 1);
     for (const [id, q] of Object.entries(def.produces)) parts.push(`+${q} ${itemDef(id)?.name}`);
   }
+  if (bonus && bonus.pence > 0) {
+    await moveMoney(tx, c, bonus.pence, "income", bonus.incomeLabel, { type: "activity", id: row.id as string });
+    paid += bonus.pence;
+    parts.push(`earned ${fmtMoney(bonus.pence)}`);
+  }
+  if (bonus && (bonus.rep || bonus.stars)) {
+    await tx.query("UPDATE characters SET reputation_xp = reputation_xp + $2, stars = stars + $3 WHERE id = $1", [c.id, bonus.rep, bonus.stars]);
+    c.reputation_xp += bonus.rep;
+    c.stars += bonus.stars;
+    if (bonus.rep) parts.push(`+${bonus.rep} reputation`);
+    if (bonus.stars) parts.push(`+${bonus.stars} star`);
+  }
   let xpInfo = null;
   if (def.xp) {
-    xpInfo = await addXp(tx, c, def.xp.skill, def.xp.amount, now);
+    xpInfo = await addXp(tx, c, def.xp.skill, Math.round(def.xp.amount * (bonus?.xpMult ?? 1)), now);
     parts.push(`${cap(def.xp.skill)} +${xpInfo.gained} XP${xpInfo.levelledUp ? ` — level ${xpInfo.level}!` : ""}`);
   }
   await emit(tx, c.id, def.event, { ...(def.eventData ?? {}), activity: def.id }, now);
@@ -441,12 +471,15 @@ export async function startActivity(tx: Tx, accountId: string, p: { activityId: 
   // Costs are charged and ingredients consumed at start (visible cancel rule says so).
   await moveMoney(tx, c, -def.costPence, "spend", def.label, { type: "activity", id });
   if (def.consumes) await changeItems(tx, c.id, def.consumes, -1);
+  // Minigames need real seconds to play, so their window is never shortened by a development time scale.
+  const ms = def.minigame ? Math.max(durationMs(minutes), MINIGAME_WINDOW_MS) : durationMs(minutes);
   await tx.query(
     `INSERT INTO activities (id, character_id, def_id, location, status, started_at, ends_at, cost_pence, period_key)
      VALUES ($1,$2,$3,$4,'running',$5,$6,$7,$8)`,
-    [id, c.id, def.id, c.location, now, new Date(now.getTime() + durationMs(minutes)), def.costPence, londonDayKey(now)],
+    [id, c.id, def.id, c.location, now, new Date(now.getTime() + ms), def.costPence, londonDayKey(now)],
   );
-  return { message: `${def.label} started.` };
+  if (def.minigame) await createRun(tx, c, id, def, now, new Date(now.getTime() + ms));
+  return { message: def.minigame ? `${def.label}: get ready!` : `${def.label} started.` };
 }
 
 export async function cancelActivity(tx: Tx, accountId: string, now: Date) {
@@ -457,6 +490,7 @@ export async function cancelActivity(tx: Tx, accountId: string, now: Date) {
     [c.id, now],
   );
   if (!res.rowCount) throw new GameError("nothing_running", "Nothing to cancel — it may already have finished.");
+  await tx.query("UPDATE minigame_runs SET status = 'cancelled' WHERE character_id = $1 AND status = 'open'", [c.id]);
   const def = activityDef(res.rows[0].def_id)!;
   return { message: `Cancelled ${def.label.toLowerCase()}. ${def.cancelRule}` };
 }
@@ -821,6 +855,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     ],
     ledger,
     ...(await careerView(tx, c, ctx, now)),
+    minigame: await minigameView(tx, c, now),
     catalogue: FURNITURE,
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };

@@ -39,7 +39,13 @@ interface Store {
   setPlacement: (p: Placement | null) => void;
   toast: (text: string, tone?: Toast["tone"]) => void;
   refresh: () => Promise<void>;
-  run: (type: string, payload?: unknown, label?: string) => Promise<boolean>;
+  /** Runs a command; resolves to the server receipt, or false when it was rejected. */
+  run: (type: string, payload?: unknown, label?: string) => Promise<false | Receipt>;
+}
+
+export interface Receipt {
+  message?: string;
+  result?: unknown;
 }
 
 let toastId = 0;
@@ -105,7 +111,7 @@ export const useGame = create<Store>((set, get) => ({
       if (r.receipt?.message) get().toast(r.receipt.message, "ok");
       if (type === "StartActivity" || type === "StartJourney" || type === "StartShift") sfx("start");
       adopt(set, get, r.state, true);
-      return true;
+      return (r.receipt ?? {}) as Receipt;
     } catch (err) {
       sfx("error");
       get().toast(err instanceof Error ? err.message : "Something went wrong.", "error");
