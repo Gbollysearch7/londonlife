@@ -102,6 +102,17 @@ export function ActionsSheet({ s }: { s: State }) {
       ) : (
         <>
           {place.kind === "venue" && <p className="muted">{place.blurb}</p>}
+          {s.treasure.anchor && (
+            <div className={styles.bonus}>
+              <div>
+                <strong>Something sparkles here…</strong>
+                <span className="tiny">Today's treasure is hidden at this place.</span>
+              </div>
+              <button className="btn small" disabled={!!pending} onClick={async () => (await run("ClaimTreasure", {}, "treasure")) && setSheet(null)}>
+                Search for it
+              </button>
+            </div>
+          )}
           <WorkSection s={s} />
           {groups.map((g) => {
             const list = visible.filter((a) => a.group === g).sort((a, b) => Number(b.available) - Number(a.available));

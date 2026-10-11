@@ -213,3 +213,18 @@
 .scrimOn { opacity: 1; transition: none; }
 .range { display: grid; grid-template-columns: 90px 1fr 40px; align-items: center; gap: 10px; margin: 8px 0; }
 .range input { width: 100%; accent-color: var(--green); }
+
+/* stories */
+.storyCard { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 8px; }
+.storyGraph { width: 100%; height: auto; background: var(--ivory); border-radius: 10px; }
+.pulse { animation: pulse 1.6s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes pulse { from { opacity: .9; transform: scale(.7); } to { opacity: 0; transform: scale(1.4); } }
+.storyText { font-family: var(--font-display); font-size: 17px; line-height: 1.45; margin: 2px 0; }
+.storyGo { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #f1e3c4; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.storyChoice { width: 100%; display: grid; gap: 4px; text-align: left; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; transition: background .15s, transform .08s; }
+.storyChoice:hover:not(:disabled) { background: #f6f1e6; transform: translateY(-1px); border-color: var(--gold); }
+.storyChoice:disabled { opacity: .65; }
+.storyPill { text-align: left; display: grid; gap: 1px; background: #f1e3c4; border: 1px solid rgba(198,156,88,.6); border-radius: 12px; padding: 7px 12px; box-shadow: 0 2px 8px rgba(23,35,43,.08); }
+.storyPill strong { font-size: 13.5px; }
+.treasure { display: flex; gap: 12px; align-items: flex-start; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 12px; }
+.gem { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg, #5fb3d9, #7a3f8f); color: #fff; font-size: 22px; flex-shrink: 0; box-shadow: 0 0 0 4px rgba(95,179,217,.2); }

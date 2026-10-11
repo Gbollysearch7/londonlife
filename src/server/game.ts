@@ -12,6 +12,7 @@ import { durationMs, londonClock, londonDayKey, londonHour, timeScale } from "@/
 import { GameError, type Tx } from "./db";
 import { careerView, settleDueShift } from "./careers";
 import { MINIGAME_WINDOW_MS, createRun, minigameView } from "./minigames";
+import { storyView, treasureView } from "./stories";
 
 // ───────────────────────────── rows ─────────────────────────────
 
@@ -856,6 +857,8 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     ledger,
     ...(await careerView(tx, c, ctx, now)),
     minigame: await minigameView(tx, c, now),
+    stories: await storyView(tx, c),
+    treasure: await treasureView(tx, c, now),
     catalogue: FURNITURE,
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };

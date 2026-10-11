@@ -6,6 +6,7 @@ import type { State } from "@/client/api";
 import { Celebrations, Dock, NeedsBar, ProgressStrip, Toasts, TopBar, Warnings } from "./Hud";
 import { HotspotCard } from "./HotspotCard";
 import { MinigameOverlay } from "./Minigame";
+import { StoryPill } from "./Stories";
 import { initSound } from "@/client/sound";
 import { useScene } from "@/world/sceneStore";
 import { ActionsSheet, BuySheet, MapSheet, NeedsSheet, PlacementBar } from "./Sheets";
@@ -110,6 +111,7 @@ export default function Game() {
       {offline && <div className={styles.offline}>Reconnecting… your progress is safe on the server.</div>}
       <div className={styles.leftCol}>
         <NextStep s={state} />
+        <StoryPill s={state} />
         <Warnings s={state} />
       </div>
       <NeedsBar s={state} />

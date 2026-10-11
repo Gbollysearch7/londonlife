@@ -6,7 +6,10 @@ import { activityDef, venue } from "@/content/world";
 import type { State } from "@/client/api";
 import Avatar from "./Avatar";
 import { Extra, Walkers } from "./Crowd";
-import { CelebrationBurst, FloatingTexts } from "./effects";
+import { CelebrationBurst, FloatingTexts, Particles } from "./effects";
+import { useFrame } from "@react-three/fiber";
+import { useGame } from "@/client/store";
+import { useFx } from "@/client/fx";
 import { TextLabel } from "./TextLabel";
 import type { Lighting } from "./lighting";
 import PlayerAvatar, { type Goal } from "./PlayerAvatar";
@@ -47,6 +50,46 @@ export function venueGoal(state: State, layout: VenueLayout): Goal | null {
   const a = def?.anchor ? layout.anchors[def.anchor] : undefined;
   if (!def || !a) return null;
   return anchorGoal(`act:${state.activity.id}`, a, visualFor(def.id));
+}
+
+/** Today's treasure, only rendered when you're standing in the right venue. */
+function Gem({ pos }: { pos: [number, number] }) {
+  const ref = useRef<Group>(null);
+  const [hover, setHover] = useState(false);
+  useCursor(hover);
+  const run = useGame((x) => x.run);
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const t = clock.getElapsedTime();
+    ref.current.rotation.y = t * 1.6;
+    ref.current.position.y = 1.0 + Math.sin(t * 2.5) * 0.12;
+  });
+  const claim = async () => {
+    const r = await run("ClaimTreasure", {}, "treasure");
+    if (r) useFx.getState().push([], [{ title: "Treasure found!", sub: r.message ?? "", icon: "◆" }]);
+  };
+  return (
+    <group position={[pos[0], 0, pos[1]]}>
+      <group
+        ref={ref}
+        onClick={(e) => {
+          if (e.delta > 6) return;
+          e.stopPropagation();
+          void claim();
+        }}
+        onPointerOver={(e) => (e.stopPropagation(), setHover(true))}
+        onPointerOut={() => setHover(false)}
+        scale={hover ? 1.25 : 1}
+      >
+        <mesh castShadow>
+          <octahedronGeometry args={[0.28, 0]} />
+          <meshStandardMaterial color="#5fb3d9" emissive="#7ad0ff" emissiveIntensity={1.2} metalness={0.4} roughness={0.15} />
+        </mesh>
+        <pointLight intensity={3} distance={4} color="#9fdcff" />
+      </group>
+      <Particles kind="sparkle" position={[0, 1.0, 0]} />
+    </group>
+  );
 }
 
 function Npc({ npc, name, onSelect }: { npc: VenueLayout["npcs"][number]; name: string; onSelect: () => void }) {
@@ -147,6 +190,13 @@ export default function VenueScene({ state, light }: { state: State; light: Ligh
           />
         );
       })}
+      {state.treasure.anchor && layout.anchors[state.treasure.anchor] && (
+        <Gem pos={(() => {
+          const a = layout.anchors[state.treasure.anchor!];
+          const p = a.approach ?? a.pos;
+          return [p[0] + 0.6, p[1] + 0.4] as [number, number];
+        })()} />
+      )}
       <WalkPlane size={[w, d]} onWalk={(x, z) => (busy ? openHotspot(null) : walkTo(x, z))} />
       <TapRipple at={busy ? null : walkTarget} />
       <PlayerAvatar

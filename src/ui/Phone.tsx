@@ -5,9 +5,12 @@ import { useGame, type PhoneApp } from "@/client/store";
 import type { State } from "@/client/api";
 import Sheet from "./Sheet";
 import { money } from "./format";
+import { StoriesApp, TreasureApp } from "./Stories";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
+  { id: "stories", name: "Stories", icon: "✎" },
+  { id: "treasure", name: "Treasure", icon: "◈" },
   { id: "jobs", name: "Jobs", icon: "◆" },
   { id: "missions", name: "Missions", icon: "✓" },
   { id: "bank", name: "Bank", icon: "£" },
@@ -56,6 +59,8 @@ const TITLES: Record<string, string> = {
   profile: "Profile",
   inventory: "Kitchen cupboard",
   tour: "Your first twenty minutes",
+  stories: "Stories",
+  treasure: "Daily treasure",
   help: "Help",
   settings: "Settings",
 };
@@ -79,7 +84,14 @@ export function PhoneSheet({ s }: { s: State }) {
         <>
           <ul className={styles.apps}>
             {LIVE.map((a) => {
-              const badge = a.id === "missions" ? s.missions.items.filter((m) => m.claimable).length + (s.missions.bonus.claimable ? 1 : 0) : 0;
+              const badge =
+                a.id === "missions"
+                  ? s.missions.items.filter((m) => m.claimable).length + (s.missions.bonus.claimable ? 1 : 0)
+                  : a.id === "stories"
+                    ? Number(!!s.stories.active?.here)
+                    : a.id === "treasure"
+                      ? Number(!s.treasure.found)
+                      : 0;
               return (
                 <li key={a.id}>
                   <button className={styles.app} onClick={() => open(a.id)}>
@@ -109,6 +121,8 @@ export function PhoneSheet({ s }: { s: State }) {
           </ul>
         </>
       )}
+      {current === "stories" && <StoriesApp s={s} />}
+      {current === "treasure" && <TreasureApp s={s} />}
       {current === "jobs" && <Jobs s={s} />}
       {current === "missions" && <Missions s={s} />}
       {current === "bank" && <Bank s={s} />}
