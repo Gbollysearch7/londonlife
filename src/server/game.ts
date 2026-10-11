@@ -19,6 +19,9 @@ import { wardrobeView } from "./wardrobe";
 import { conditionClearsAt, conditionDecay, healthView, setCondition, settleDeliveries, settleHealth } from "./health";
 import { classAttended, classBlocker, classesToday, courseRows, coursesView, type CourseRow } from "./courses";
 import { moodletForActivity, perkEffects } from "@/content/goals";
+import { policyActivityCost, policyGroceryPrice, policyQuote, policyVenue, type PolicyId } from "@/content/civic";
+import { civicView, currentPolicy } from "./civic";
+import { gamesView } from "./tables";
 
 // ───────────────────────────── rows ─────────────────────────────
 
@@ -366,6 +369,8 @@ export interface Ctx {
   courses: Record<string, CourseRow>;
   classesToday: number;
   now: Date;
+  /** City policy in force (weekly election). */
+  policy: PolicyId;
 }
 
 export async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
@@ -411,6 +416,7 @@ export async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
     courses: await courseRows(tx, c.id),
     classesToday: await classesToday(tx, c.id, now),
     now,
+    policy: await currentPolicy(tx, now),
   };
 }
 
@@ -422,7 +428,7 @@ export function activityBlocker(def: ActivityDef, ctx: Ctx): string | null {
   if (ctx.running) return "Finish or cancel what you're doing first.";
   if (c.location !== def.location) return `Only at ${venue(def.location)?.name}.`;
   const hour = londonHour(ctx.now);
-  const place = venue(def.location);
+  const place = policyVenue(ctx.policy, venue(def.location));
   if (place && !isOpenAt(place, hour)) return `${place.name} is closed. Opens at ${hourLabel(place.hours![0])}.`;
   if (!inWindow(def.hours, hour)) return `Only between ${hourLabel(def.hours![0])} and ${hourLabel(def.hours![1])}.`;
   if (def.requires && !ctx.home.tags.has(def.requires)) return `Needs ${requirementName(def.requires)} placed at home.`;
@@ -436,7 +442,8 @@ export function activityBlocker(def: ActivityDef, ctx: Ctx): string | null {
   if (c.condition && def.minEnergy) return "You're run down. Rest or see the nurse before anything strenuous.";
   const course = classBlocker(def, ctx.courses, ctx.classesToday);
   if (course) return course;
-  if (def.costPence > c.cash_pence) return `Costs ${fmtMoney(def.costPence)}; you have ${fmtMoney(c.cash_pence)}.`;
+  const cost = policyActivityCost(ctx.policy, def, ctx.now);
+  if (cost > c.cash_pence) return `Costs ${fmtMoney(cost)}; you have ${fmtMoney(c.cash_pence)}.`;
   if (def.once && ctx.onceDone.has(`activity:${def.id}`)) return "Already completed — this one pays once.";
   if (def.dailyLimit && (ctx.todayCounts[def.id] ?? 0) >= def.dailyLimit) return `Limit of ${def.dailyLimit} per day reached.`;
   if (def.cooldownMin && ctx.lastDone[def.id]) {
@@ -539,14 +546,15 @@ export async function startActivity(tx: Tx, accountId: string, p: { activityId: 
   const minutes = activityMinutes(def, ctx.home);
   const id = crypto.randomUUID();
   // Costs are charged and ingredients consumed at start (visible cancel rule says so).
-  await moveMoney(tx, c, -def.costPence, "spend", def.label, { type: "activity", id });
+  const cost = policyActivityCost(ctx.policy, def, now);
+  await moveMoney(tx, c, -cost, "spend", def.label, { type: "activity", id });
   if (def.consumes) await changeItems(tx, c.id, def.consumes, -1);
   // Minigames need real seconds to play, so their window is never shortened by a development time scale.
   const ms = def.minigame ? Math.max(durationMs(minutes), MINIGAME_WINDOW_MS) : durationMs(minutes);
   await tx.query(
     `INSERT INTO activities (id, character_id, def_id, location, status, started_at, ends_at, cost_pence, period_key)
      VALUES ($1,$2,$3,$4,'running',$5,$6,$7,$8)`,
-    [id, c.id, def.id, c.location, now, new Date(now.getTime() + ms), def.costPence, londonDayKey(now)],
+    [id, c.id, def.id, c.location, now, new Date(now.getTime() + ms), cost, londonDayKey(now)],
   );
   if (def.minigame) await createRun(tx, c, id, def, now, new Date(now.getTime() + ms));
   return { message: def.minigame ? `${def.label}: get ready!` : `${def.label} started.` };
@@ -577,7 +585,7 @@ export async function startJourney(tx: Tx, accountId: string, p: { destination: 
   if (ctx.shift) throw new GameError("on_shift", "You're on shift. Leave your shift before travelling.");
   const homeAt = HOME_DISTRICT_POS[ctx.home.home.district] ?? [0, 0];
   if (!modesFor(c.location, p.destination, homeAt).includes(p.mode)) throw new GameError("bad_mode", "The Tube only runs between districts.");
-  const q = journeyQuote(c.location, p.destination, p.mode, homeAt);
+  const q = policyQuote(ctx.policy, journeyQuote(c.location, p.destination, p.mode, homeAt));
   const id = crypto.randomUUID();
   await moveMoney(tx, c, -q.farePence, "travel", `${q.name} to ${venue(p.destination)!.name}`, { type: "journey", id });
   await tx.query(
@@ -612,7 +620,7 @@ export async function buyGroceries(tx: Tx, accountId: string, p: { itemId: strin
   const qty = Number(p.qty);
   if (!item || !stock.includes(item.id)) throw new GameError("bad_item", "That isn't sold here.");
   if (!Number.isInteger(qty) || qty < 1 || qty > 10) throw new GameError("bad_qty", "Buy between 1 and 10.");
-  const total = item.pricePence! * qty;
+  const total = policyGroceryPrice(await currentPolicy(tx, now), c.location, item.pricePence!) * qty;
   await moveMoney(tx, c, -total, "groceries", `${qty} × ${item.name}`);
   await changeItems(tx, c.id, { [item.id]: qty }, 1);
   await emit(tx, c.id, "groceries_bought", { item: item.id }, now);
@@ -801,7 +809,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
       label: d.label,
       description: d.description,
       minutes: activityMinutes(d, ctx.home),
-      costPence: d.costPence,
+      costPence: policyActivityCost(ctx.policy, d, now),
       payPence: d.payPence ?? 0,
       needs: d.needs,
       xp: d.xp ? { skill: d.xp.skill, amount: xpWithTraits(d.xp.skill, d.xp.amount, c.traits, perkEffects(c.perks).xp) } : null,
@@ -890,7 +898,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     actions,
     groceries:
       GROCERY_SHOPS[c.location] && !journey
-        ? GROCERY_SHOPS[c.location]!.map((id) => ({ id, name: itemDef(id)!.name, pricePence: itemDef(id)!.pricePence!, unit: itemDef(id)!.unit }))
+        ? GROCERY_SHOPS[c.location]!.map((id) => ({ id, name: itemDef(id)!.name, pricePence: policyGroceryPrice(ctx.policy, c.location, itemDef(id)!.pricePence!), unit: itemDef(id)!.unit }))
         : [],
     directory: VENUES.map((v) => ({
       id: v.id,
@@ -898,14 +906,14 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
       district: v.id === "home" ? ctx.home.home.district : v.district,
       map: v.id === "home" ? HOME_DISTRICT_POS[ctx.home.home.district] ?? [0, 0] : v.map ?? [0, 0],
       tags: v.tags ?? [],
-      open: isOpenAt(v, londonHour(now)),
-      hours: v.hours ?? null,
+      open: isOpenAt(policyVenue(ctx.policy, v), londonHour(now)),
+      hours: policyVenue(ctx.policy, v).hours ?? null,
       blurb: v.blurb,
-      opening: v.opening,
+      opening: policyVenue(ctx.policy, v).opening,
       access: v.access,
       npcs: v.npcs,
       here: c.location === v.id,
-      quotes: c.location === v.id ? [] : modesFor(c.location, v.id, HOME_DISTRICT_POS[ctx.home.home.district]).map((m) => journeyQuote(c.location, v.id, m, HOME_DISTRICT_POS[ctx.home.home.district])),
+      quotes: c.location === v.id ? [] : modesFor(c.location, v.id, HOME_DISTRICT_POS[ctx.home.home.district]).map((m) => policyQuote(ctx.policy, journeyQuote(c.location, v.id, m, HOME_DISTRICT_POS[ctx.home.home.district]))),
     })),
     missions: {
       day: a.day,
@@ -940,6 +948,8 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     wardrobe: await wardrobeView(tx, c),
     ...(await healthView(tx, c)),
     ...(await economyView(tx, c, now)),
+    ...(await gamesView(tx, c, now)),
+    ...(await civicView(tx, c, now)),
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };
   out.character.ambition.progress = goals.ambition.progress;

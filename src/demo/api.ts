@@ -3,7 +3,8 @@
  * directly against the in-browser database instead of over HTTP.
  */
 import type { GameState } from "@/server/game";
-import { loadStateFor, runCommand } from "@/server/commands";
+import { loadStateFor, loadTableFor, runCommand } from "@/server/commands";
+import type { TableView } from "@/server/tables";
 import { GameError } from "./db";
 import { localAccountId, resetSave, saveNow } from "./boot";
 
@@ -27,6 +28,16 @@ function toApiError(err: unknown) {
 export async function fetchState(): Promise<GameState> {
   try {
     return wire(await loadStateFor(localAccountId()));
+  } catch (err) {
+    throw toApiError(err);
+  }
+}
+
+export async function fetchTable(id: string): Promise<TableView> {
+  try {
+    const t = wire(await loadTableFor(localAccountId(), id));
+    void saveNow();
+    return t;
   } catch (err) {
     throw toApiError(err);
   }

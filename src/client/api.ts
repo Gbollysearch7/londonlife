@@ -1,5 +1,6 @@
 "use client";
 import type { GameState } from "@/server/game";
+import type { TableView } from "@/server/tables";
 
 export type State = Extract<GameState, { character: object }> & { character: NonNullable<GameState["character"]> };
 
@@ -19,6 +20,11 @@ async function parse(res: Response) {
 
 export async function fetchState(): Promise<GameState> {
   return parse(await fetch("/api/state", { cache: "no-store" }));
+}
+
+/** Public state of one games table (the board overlay polls this). */
+export async function fetchTable(id: string): Promise<TableView> {
+  return parse(await fetch(`/api/table?id=${encodeURIComponent(id)}`, { cache: "no-store" }));
 }
 
 export async function postJson(url: string, data: unknown) {

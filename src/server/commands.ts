@@ -8,6 +8,8 @@ import * as economy from "./economy";
 import * as courses from "./courses";
 import * as wardrobe from "./wardrobe";
 import * as health from "./health";
+import * as tables from "./tables";
+import * as civic from "./civic";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -50,6 +52,13 @@ const HANDLERS: Record<string, Handler> = {
   EquipOutfit: wardrobe.equipOutfit as Handler,
   ChangeHair: wardrobe.changeHair as Handler,
   OrderDelivery: health.orderDelivery as Handler,
+  CreateGameTable: tables.createGameTable as Handler,
+  JoinGameTable: tables.joinGameTable as Handler,
+  GameMove: tables.gameMove as Handler,
+  LeaveGameTable: tables.leaveGameTable as Handler,
+  Rematch: tables.rematch as Handler,
+  StandForElection: civic.standForElection as Handler,
+  CastVote: civic.castVote as Handler,
 };
 
 export interface CommandResult {
@@ -85,4 +94,8 @@ export async function runCommand(accountId: string, key: string, type: string, p
 
 export function loadStateFor(accountId: string, now = new Date()) {
   return withTx((tx) => game.loadState(tx, accountId, now));
+}
+
+export function loadTableFor(accountId: string, tableId: unknown, now = new Date()) {
+  return withTx((tx) => tables.loadTableFor(tx, accountId, tableId, now));
 }
