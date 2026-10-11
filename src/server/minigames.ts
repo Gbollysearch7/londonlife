@@ -40,7 +40,7 @@ export async function submitMinigame(tx: Tx, accountId: string, p: { runId: stri
     const answers = Array.isArray(p.answers) ? p.answers.slice(0, qs.length) : [];
     const correct = quizScore(qs, answers);
     const prize = quizPrize(correct);
-    bonus = { xpMult: 0.5 + correct / qs.length, pence: prize.pence, rep: prize.rep, stars: prize.stars, label: `${correct}/${qs.length} correct`, incomeLabel: `Quiz prize at ${def.label.replace("Take on the ", "")}` };
+    bonus = { xpMult: 0.5 + correct / qs.length, pence: prize.pence, rep: prize.rep, stars: prize.stars, label: `${correct}/${qs.length} correct`, incomeLabel: `Quiz prize at ${def.label.replace("Take on the ", "")}`, moodlet: correct >= 4 ? "buzzing" : correct === 0 ? "embarrassed" : undefined };
     result = { kind: "quiz", correct, total: qs.length, answers, solutions: qs.map((q) => q.answer), pence: prize.pence, rep: prize.rep, stars: prize.stars, label: prize.label };
   } else {
     const spec = RHYTHM[run.def_id];
@@ -51,7 +51,7 @@ export async function submitMinigame(tx: Tx, accountId: string, p: { runId: stri
     const level = await skillLevel(tx, c.id, spec.skill);
     const score = performanceScore(accuracy, level);
     const reward = rhythmReward(spec, score);
-    bonus = { xpMult: reward.xpMult, pence: reward.pence, rep: Math.round(score * 12), stars: 0, label: `${Math.round(score * 100)}% performance`, incomeLabel: `${spec.title} tips` };
+    bonus = { xpMult: reward.xpMult, pence: reward.pence, rep: Math.round(score * 12), stars: 0, label: `${Math.round(score * 100)}% performance`, incomeLabel: `${spec.title} tips`, moodlet: score >= 0.6 ? "buzzing" : score < 0.25 ? "embarrassed" : undefined };
     result = { kind: "rhythm", hits, total: notes.length, accuracy, score, pence: reward.pence, label: reward.label };
   }
   const notices = await completeActivity(tx, c, act, now, bonus);

@@ -5,7 +5,7 @@ import { diffStates, useFx } from "./fx";
 import { sfx, type Sfx } from "./sound";
 
 export type SheetId = "actions" | "map" | "buy" | "phone" | "needs" | null;
-export type PhoneApp = "home" | "jobs" | "missions" | "bank" | "skills" | "profile" | "inventory" | "tour" | "stories" | "treasure";
+export type PhoneApp = "home" | "jobs" | "missions" | "bank" | "skills" | "profile" | "inventory" | "tour" | "stories" | "treasure" | "goals" | "perks" | "people";
 
 export interface Placement {
   instanceId: string;

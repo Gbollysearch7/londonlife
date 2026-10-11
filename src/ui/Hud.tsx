@@ -152,7 +152,12 @@ export function Dock({ s }: { s: State }) {
   const sheet = useGame((x) => x.sheet);
   const setSheet = useGame((x) => x.setSheet);
   const setPhoneApp = useGame((x) => x.setPhoneApp);
-  const claimable = s.missions.items.filter((m) => m.claimable).length + (s.missions.bonus.claimable ? 1 : 0);
+  const claimable =
+    s.missions.items.filter((m) => m.claimable).length +
+    (s.missions.bonus.claimable ? 1 : 0) +
+    s.goals.wishes.filter((w) => w.claimable).length +
+    s.goals.ambition.milestones.filter((m) => m.claimable).length +
+    Number(!!s.stories.active?.here);
   const items = [
     { id: "actions" as const, label: s.character.location === "home" ? "Home" : "Here", icon: "◉" },
     { id: "buy" as const, label: "Buy", icon: "▣" },

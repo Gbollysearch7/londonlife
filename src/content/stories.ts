@@ -316,10 +316,11 @@ export const storyDef = (id: string) => STORIES.find((s) => s.id === id);
 export const storyNode = (story: StoryDef, id: string) => story.nodes.find((n) => n.id === id);
 
 /** Chance clamped to 5–95% so nothing is certain and nothing is hopeless. */
-export function choiceChance(c: StoryChoice, levels: Partial<Record<SkillId, number>>): number | null {
+export function choiceChance(c: StoryChoice, levels: Partial<Record<SkillId, number>>, charismaBonus = 0): number | null {
   if (!c.chance) return null;
   const lvl = c.chance.skill ? levels[c.chance.skill] ?? 0 : 0;
-  return Math.max(0.05, Math.min(0.95, c.chance.base + (c.chance.perLevel ?? 0) * lvl));
+  const bonus = c.chance.skill === "charisma" ? charismaBonus : 0;
+  return Math.max(0.05, Math.min(0.95, c.chance.base + (c.chance.perLevel ?? 0) * lvl + bonus));
 }
 
 /** Graph layout for the phone view: depth by breadth-first search from the start node. */

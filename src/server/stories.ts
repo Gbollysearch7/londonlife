@@ -7,6 +7,8 @@ import { levelForXp } from "@/sim/progression";
 import { seededRandom } from "@/sim/shift";
 import { londonDayKey, londonHour } from "@/sim/time";
 import { GameError, type Tx } from "./db";
+import { perkEffects } from "@/content/goals";
+import { grantMoodlet } from "./goals";
 import { addXp, emit, fmtMoney, loadCtx, moveMoney, requireCharacter, saveNeeds, settle, type CharRow } from "./game";
 
 async function levels(tx: Tx, charId: string) {
@@ -73,7 +75,7 @@ export async function chooseStory(tx: Tx, accountId: string, p: { choiceId: stri
   }
   const log = run.log as { node: string; choice: string; roll?: number; success?: boolean; at: string }[];
   let next = choice.next;
-  const chance = choiceChance(choice, lv);
+  const chance = choiceChance(choice, lv, perkEffects(c.perks).socialChance);
   const entry: (typeof log)[number] = { node: node.id, choice: choice.id, at: now.toISOString() };
   if (chance !== null) {
     // Rolled once on the server from the run and step; the result is stored, so a reload can't reroll it.
@@ -95,6 +97,7 @@ export async function chooseStory(tx: Tx, accountId: string, p: { choiceId: stri
       parts.push(`+${e.rep} reputation${e.stars ? `, +${e.stars} star${e.stars > 1 ? "s" : ""}` : ""}${e.pence ? `, ${fmtMoney(e.pence)}` : ""}`);
     } else parts.push("(replay — rewards are paid once per story)");
     await emit(tx, c.id, "story_completed", { story: story.id, ending: next }, now);
+    if (e.rep >= 45) await grantMoodlet(tx, c, "story_high", story.id, now);
     return { message: `${e.title}. ${parts.join(" · ")}`, ending: e.title };
   }
   await tx.query("UPDATE story_runs SET node_id = $2, log = $3 WHERE id = $1", [run.id, next, JSON.stringify(log)]);
@@ -135,7 +138,7 @@ export async function storyView(tx: Tx, c: CharRow) {
       locationName: node.location ? venue(node.location)!.name : null,
       here: !node.location || node.location === c.location,
       choices: node.choices.map((ch) => {
-        const chance = choiceChance(ch, lv);
+        const chance = choiceChance(ch, lv, perkEffects(c.perks).socialChance);
         return {
           id: ch.id,
           label: ch.label,
@@ -196,6 +199,7 @@ export async function claimTreasure(tx: Tx, accountId: string, _p: unknown, now:
   await tx.query("INSERT INTO treasure_claims (day, character_id, rank, reward_pence, claimed_at) VALUES ($1,$2,$3,$4,$5)", [day, c.id, rank, reward, now]);
   await moveMoney(tx, c, reward, "treasure", `Daily treasure (finder #${rank})`, { type: "treasure", id: day });
   await emit(tx, c.id, "treasure_found", { venue: spot.venue }, now);
+  await grantMoodlet(tx, c, "lucky_find", "treasure", now);
   return { message: `You found today's treasure! Finder #${rank}: ${fmtMoney(reward)}.`, rank };
 }
 

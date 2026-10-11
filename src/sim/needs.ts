@@ -10,8 +10,9 @@ import { NEED_IDS, type NeedId, type Needs } from "@/content/types";
 export const clampNeed = (v: number) => Math.min(100, Math.max(0, v));
 
 /** Decay rate per hour for a character, after trait multipliers (applied once, server-side). */
-export function decayRates(traitIds: string[]): Record<NeedId, number> {
+export function decayRates(traitIds: string[], perkDecay: Partial<Record<NeedId, number>> = {}): Record<NeedId, number> {
   const rates = { ...DECAY_PER_HOUR };
+  for (const [need, mult] of Object.entries(perkDecay)) rates[need as NeedId] *= mult!;
   for (const t of traitIds) {
     const def = TRAITS.find((x) => x.id === t);
     for (const [need, mult] of Object.entries(def?.decay ?? {})) rates[need as NeedId] *= mult!;
@@ -25,6 +26,8 @@ export interface SettleInput {
   now: Date;
   traits: string[];
   createdAt: Date;
+  /** Perk multipliers on decay rates (applied once, to rates). */
+  perkDecay?: Partial<Record<NeedId, number>>;
 }
 
 export interface SettleResult {
@@ -39,10 +42,10 @@ export interface SettleResult {
  * Order: elapsed → offline cap → trait-adjusted rates → newcomer floor → clamp.
  * Callers store the result with `now` as the new settlement time, so no interval is applied twice.
  */
-export function settleNeeds({ needs, settledAt, now, traits, createdAt }: SettleInput): SettleResult {
+export function settleNeeds({ needs, settledAt, now, traits, createdAt, perkDecay }: SettleInput): SettleResult {
   const elapsedHours = Math.max(0, (now.getTime() - settledAt.getTime()) / 3_600_000);
   const appliedHours = Math.min(elapsedHours, OFFLINE_CAP_HOURS);
-  const rates = decayRates(traits);
+  const rates = decayRates(traits, perkDecay);
   const inGrace = now.getTime() - createdAt.getTime() < NEWCOMER_GRACE_HOURS * 3_600_000;
   const next = { ...needs };
   for (const id of NEED_IDS) {

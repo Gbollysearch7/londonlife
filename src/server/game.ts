@@ -13,6 +13,8 @@ import { GameError, type Tx } from "./db";
 import { careerView, settleDueShift } from "./careers";
 import { MINIGAME_WINDOW_MS, createRun, minigameView } from "./minigames";
 import { storyView, treasureView } from "./stories";
+import { activeMoodlets, goalsView, grantMoodlet } from "./goals";
+import { moodletForActivity, perkEffects } from "@/content/goals";
 
 // ───────────────────────────── rows ─────────────────────────────
 
@@ -31,6 +33,8 @@ export interface CharRow {
   needs: Needs;
   needs_settled_at: Date;
   created_at: Date;
+  /** Owned perk ids (loaded with the character). */
+  perks: string[];
 }
 
 function toChar(r: Record<string, unknown>): CharRow {
@@ -51,12 +55,16 @@ function toChar(r: Record<string, unknown>): CharRow {
     needs,
     needs_settled_at: r.needs_settled_at as Date,
     created_at: r.created_at as Date,
+    perks: [],
   };
 }
 
 export async function lockCharacter(tx: Tx, accountId: string): Promise<CharRow | null> {
   const res = await tx.query("SELECT * FROM characters WHERE account_id = $1 FOR UPDATE", [accountId]);
-  return res.rowCount ? toChar(res.rows[0]) : null;
+  if (!res.rowCount) return null;
+  const c = toChar(res.rows[0]);
+  c.perks = (await tx.query("SELECT perk_id FROM perks WHERE character_id = $1", [c.id])).rows.map((r) => r.perk_id as string);
+  return c;
 }
 
 export async function requireCharacter(tx: Tx, accountId: string) {
@@ -68,6 +76,9 @@ export async function requireCharacter(tx: Tx, accountId: string) {
 // ─────────────────────────── primitives ───────────────────────────
 
 export const fmtMoney = (p: number) => `£${(p / 100).toFixed(2)}`;
+
+/** Catalogue price after any furniture-discount perk, rounded to whole pence. */
+export const furniturePrice = (list: number, perks: string[]) => Math.round(list * perkEffects(perks).furniture);
 
 export async function moveMoney(
   tx: Tx,
@@ -132,7 +143,7 @@ export async function grantOnce(tx: Tx, charId: string, key: string, now: Date):
 }
 
 export async function addXp(tx: Tx, c: CharRow, skill: SkillId, base: number, now: Date) {
-  const gained = xpWithTraits(skill, base, c.traits);
+  const gained = xpWithTraits(skill, base, c.traits, perkEffects(c.perks).xp);
   const res = await tx.query(
     `UPDATE skills SET xp = xp + $3, last_used_at = $4 WHERE character_id = $1 AND skill_id = $2 RETURNING xp, best_level`,
     [c.id, skill, gained, now],
@@ -189,7 +200,7 @@ function activityMinutes(def: ActivityDef, home: HomeCtx) {
  * Safe to run on every request; each step is conditional on persisted status, so nothing settles twice.
  */
 export async function settle(tx: Tx, c: CharRow, now: Date) {
-  const result = settleNeeds({ needs: c.needs, settledAt: c.needs_settled_at, now, traits: c.traits, createdAt: c.created_at });
+  const result = settleNeeds({ needs: c.needs, settledAt: c.needs_settled_at, now, traits: c.traits, createdAt: c.created_at, perkDecay: perkEffects(c.perks).decay });
   c.needs = result.needs;
   const notices: string[] = [];
   if (c.needs.bladder <= 0) {
@@ -216,6 +227,8 @@ export async function settle(tx: Tx, c: CharRow, now: Date) {
     await tx.query("UPDATE characters SET location = $2 WHERE id = $1", [c.id, j.destination]);
     c.location = j.destination;
     await emit(tx, c.id, "journey_arrived", { mode: j.mode, destination: j.destination }, now);
+    const wx = weatherFor(londonDayKey(now)).id;
+    if (j.mode === "walk" && (wx === "rain" || wx === "drizzle") && (await grantMoodlet(tx, c, "soaked", "walk", now))) notices.push("You walked in the rain and got soaked.");
     notices.push(`Arrived at ${venue(j.destination)?.name}.`);
   }
   return notices;
@@ -229,12 +242,15 @@ export interface MinigameBonus {
   stars: number;
   label: string;
   incomeLabel: string;
+  moodlet?: string;
 }
 
 export async function completeActivity(tx: Tx, c: CharRow, row: Record<string, unknown>, now: Date, bonus?: MinigameBonus): Promise<string[]> {
   const def = activityDef(row.def_id as string)!;
   const claimed = await tx.query(
-    "UPDATE activities SET status = 'completed', settled_at = $2 WHERE id = $1 AND status = 'running' RETURNING id",
+    // Settled at the moment it actually finished (or earlier, for a minigame submitted early), so cooldowns
+    // and daily counts don't depend on when the player next opened the game.
+    "UPDATE activities SET status = 'completed', settled_at = LEAST(ends_at, $2) WHERE id = $1 AND status = 'running' RETURNING id",
     [row.id, now],
   );
   if (!claimed.rowCount) return [];
@@ -248,7 +264,8 @@ export async function completeActivity(tx: Tx, c: CharRow, row: Record<string, u
   if (bonus) parts.push(bonus.label);
   const home = await homeContext(tx, c);
 
-  const mult = def.id === "sleep" && home.bestBed >= 2 ? { energy: 1.1 } : {};
+  const sleepPerk = def.id === "sleep" || def.id === "nap" ? perkEffects(c.perks).sleep : 1;
+  const mult = { energy: (def.id === "sleep" && home.bestBed >= 2 ? 1.1 : 1) * sleepPerk };
   const before = { ...c.needs };
   c.needs = applyEffects(c.needs, def.needs, mult);
   await saveNeeds(tx, c, now);
@@ -288,6 +305,12 @@ export async function completeActivity(tx: Tx, c: CharRow, row: Record<string, u
     parts.push(`${cap(def.xp.skill)} +${xpInfo.gained} XP${xpInfo.levelledUp ? ` — level ${xpInfo.level}!` : ""}`);
   }
   await emit(tx, c.id, def.event, { ...(def.eventData ?? {}), activity: def.id }, now);
+  if (def.npc) await emit(tx, c.id, "npc_time", { npc: def.npc }, now);
+  const moodlet = bonus?.moodlet ?? moodletForActivity(def.id, def.event, def.eventData?.skill as SkillId | undefined);
+  if (moodlet) {
+    const m = await grantMoodlet(tx, c, moodlet, def.id, now);
+    if (m) parts.push(`feeling: ${m.toLowerCase()}`);
+  }
 
   if ((def.event === "washed" || def.event === "toilet") && (await grantOnce(tx, c.id, "first_care", now))) {
     await tx.query("UPDATE characters SET stars = stars + $2 WHERE id = $1", [c.id, FIRST_CARE_STARS]);
@@ -556,10 +579,11 @@ export async function buyFurniture(tx: Tx, accountId: string, p: { defId: string
   if (!def) throw new GameError("bad_item", "Unknown item.");
   const colour = p.colour && def.colours.includes(p.colour) ? p.colour : def.colours[0];
   const id = crypto.randomUUID();
-  await moveMoney(tx, c, -def.pricePence, "furniture", def.name, { type: "furniture", id });
+  const price = furniturePrice(def.pricePence, c.perks);
+  await moveMoney(tx, c, -price, "furniture", def.name, { type: "furniture", id });
   await tx.query(
     "INSERT INTO furniture (id, character_id, def_id, colour, price_pence) VALUES ($1,$2,$3,$4,$5)",
-    [id, c.id, def.id, colour, def.pricePence],
+    [id, c.id, def.id, colour, price],
   );
   await emit(tx, c.id, "furniture_bought", { def: def.id }, now);
   return { message: `${def.name} bought and delivered to storage. Place it at home.`, instanceId: id };
@@ -693,7 +717,8 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
   const ctx = await loadCtx(tx, c, now);
   const day = londonDayKey(now);
   const weather = weatherFor(day);
-  const mood = computeMood(c.needs, ctx.home.placed.map((p) => p.defId), weather);
+  const moodletRows = await activeMoodlets(tx, c, now);
+  const mood = computeMood(c.needs, ctx.home.placed.map((p) => p.defId), weather, moodletRows);
   const a = await ensureAssignment(tx, c, now);
 
   const skillRows = (await tx.query("SELECT skill_id, xp, best_level FROM skills WHERE character_id = $1", [c.id])).rows;
@@ -726,7 +751,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
       costPence: d.costPence,
       payPence: d.payPence ?? 0,
       needs: d.needs,
-      xp: d.xp ? { skill: d.xp.skill, amount: xpWithTraits(d.xp.skill, d.xp.amount, c.traits) } : null,
+      xp: d.xp ? { skill: d.xp.skill, amount: xpWithTraits(d.xp.skill, d.xp.amount, c.traits, perkEffects(c.perks).xp) } : null,
       consumes: Object.entries(d.consumes ?? {}).map(([id, qty]) => ({ id, name: itemDef(id)?.name ?? id, qty })),
       produces: Object.entries(d.produces ?? {}).map(([id, qty]) => ({ id, name: itemDef(id)?.name ?? id, qty })),
       cancelRule: d.cancelRule,
@@ -763,9 +788,9 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
 
   const origin = ORIGINS.find((o) => o.id === c.origin_id)!;
   const ambition = AMBITIONS.find((x) => x.id === c.ambition)!;
-  const music = skills.find((s) => s.id === "music")!;
 
-  return {
+  const goals = await goalsView(tx, c, now);
+  const out = {
     now: now.toISOString(),
     timeScale: timeScale(),
     clock: londonClock(now),
@@ -778,11 +803,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
       appearance: c.appearance,
       traits: c.traits.map((t) => TRAITS.find((x) => x.id === t)!),
       origin: { id: origin.id, name: origin.name, story: origin.story, perks: origin.perks, cashPence: origin.cashPence },
-      ambition: {
-        ...ambition,
-        progress: ambition.id === "music_master" ? music.level / 10 : null,
-        note: ambition.id === "music_master" ? `Music level ${music.level} of 10` : "Progress tracking arrives with careers, housing, friendships and companies (Milestones 2–3).",
-      },
+      ambition: { ...ambition, progress: null as number | null, note: "" },
       location: c.location,
       stars: c.stars,
       reputation: reputation(c.reputation_xp),
@@ -859,9 +880,14 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     minigame: await minigameView(tx, c, now),
     stories: await storyView(tx, c),
     treasure: await treasureView(tx, c, now),
-    catalogue: FURNITURE,
+    catalogue: FURNITURE.map((f) => ({ ...f, pricePence: furniturePrice(f.pricePence, c.perks), listPence: f.pricePence })),
+    moodlets: moodletRows,
+    goals,
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };
+  out.character.ambition.progress = goals.ambition.progress;
+  out.character.ambition.note = goals.ambition.note;
+  return out;
 }
 
 export type GameState = Awaited<ReturnType<typeof loadState>>;

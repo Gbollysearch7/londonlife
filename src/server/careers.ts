@@ -7,6 +7,7 @@ import { levelForXp } from "@/sim/progression";
 import { applyShift, londonWeekKey, londonWeekday, planTasks, shiftOutcome, wageTax, type ShiftTask, type StyleMark } from "@/sim/shift";
 import { durationMs, londonDayKey, londonHour } from "@/sim/time";
 import { GameError, type Tx } from "./db";
+import { perkEffects } from "@/content/goals";
 import { addXp, emit, fmtMoney, loadCtx, moveMoney, requireCharacter, saveNeeds, type CharRow, type Ctx } from "./game";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -176,6 +177,8 @@ async function settleShift(tx: Tx, c: CharRow, row: Record<string, any>, end: Da
   const startedAt = new Date(row.started_at);
   const msPerMinute = (new Date(row.ends_at).getTime() - startedAt.getTime()) / SHIFT.minutes;
   const o = shiftOutcome({ shiftId: row.id, salaryPence: Number(row.salary_pence), marks: row.styles, tasks: row.tasks, startedAt, end, msPerMinute });
+  // Go-Getter perk: performance gains (not losses) count 25% more.
+  if (o.perfDelta > 0) o.perfDelta = Math.round(o.perfDelta * perkEffects(c.perks).workPerf);
 
   const earned = await tx.query(
     "SELECT COALESCE(SUM(gross_pence), 0) AS g FROM shifts WHERE character_id = $1 AND week_key = $2 AND id <> $3 AND settled_at IS NOT NULL",

@@ -282,6 +282,16 @@ export function NeedsSheet({ s }: { s: State }) {
         <h3>
           Mood: {s.mood.label} ({s.mood.score})
         </h3>
+        {s.moodlets.length > 0 && (
+          <div className={styles.moodlets}>
+            {s.moodlets.map((m) => (
+              <span key={m.id} className={`chip ${m.strength > 0 ? "good" : "bad"}`} title={`Until ${new Date(m.expiresAt).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })}`}>
+                {m.icon} {m.label} {m.strength > 0 ? "+" : ""}
+                {m.strength}
+              </span>
+            ))}
+          </div>
+        )}
         <ul className={styles.factors}>
           {s.mood.factors.map((f) => (
             <li key={f.label}>

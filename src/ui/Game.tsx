@@ -7,6 +7,7 @@ import { Celebrations, Dock, NeedsBar, ProgressStrip, Toasts, TopBar, Warnings }
 import { HotspotCard } from "./HotspotCard";
 import { MinigameOverlay } from "./Minigame";
 import { StoryPill } from "./Stories";
+import { CheckInModal } from "./Goals";
 import { initSound } from "@/client/sound";
 import { useScene } from "@/world/sceneStore";
 import { ActionsSheet, BuySheet, MapSheet, NeedsSheet, PlacementBar } from "./Sheets";
@@ -121,6 +122,7 @@ export default function Game() {
         <Dock s={state} />
       </div>
       <MinigameOverlay s={state} />
+      <CheckInModal s={state} />
       <Toasts />
       <Celebrations />
       {sheet === "actions" && <ActionsSheet s={state} />}

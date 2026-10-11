@@ -3,6 +3,7 @@ import * as game from "./game";
 import * as careers from "./careers";
 import * as minigames from "./minigames";
 import * as stories from "./stories";
+import * as goals from "./goals";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -29,6 +30,11 @@ const HANDLERS: Record<string, Handler> = {
   ChooseStory: stories.chooseStory as Handler,
   LeaveStory: stories.leaveStory as Handler,
   ClaimTreasure: stories.claimTreasure as Handler,
+  DailyCheckIn: goals.dailyCheckIn as Handler,
+  ClaimWish: goals.claimWish as Handler,
+  BuyPerk: goals.buyPerk as Handler,
+  ClaimAmbition: goals.claimAmbition as Handler,
+  ChangeAmbition: goals.changeAmbition as Handler,
 };
 
 export interface CommandResult {

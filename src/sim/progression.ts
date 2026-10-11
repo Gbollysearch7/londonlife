@@ -17,8 +17,8 @@ export function skillProgress(xp: number) {
 }
 
 /** XP after trait multipliers. Applied exactly once, on the server, at settlement. */
-export function xpWithTraits(skill: SkillId, base: number, traits: string[]): number {
-  let mult = 1;
+export function xpWithTraits(skill: SkillId, base: number, traits: string[], perkMult = 1): number {
+  let mult = perkMult;
   for (const t of traits) mult *= TRAITS.find((x) => x.id === t)?.xp?.[skill] ?? 1;
   return Math.round(base * mult);
 }
@@ -36,7 +36,7 @@ export interface MoodFactor {
 }
 
 /** Mood = average of needs plus bounded modifiers. Duplicate decor definitions count once. */
-export function computeMood(needs: Needs, placedDefIds: string[], weather: { moodDelta: number; label: string }) {
+export function computeMood(needs: Needs, placedDefIds: string[], weather: { moodDelta: number; label: string }, moodlets: { label: string; strength: number }[] = []) {
   const base = NEED_IDS.reduce((s, id) => s + needs[id], 0) / NEED_IDS.length;
   const factors: MoodFactor[] = [{ label: "Needs", value: Math.round(base) }];
   const uniqueDecor = new Set(placedDefIds);
@@ -45,6 +45,7 @@ export function computeMood(needs: Needs, placedDefIds: string[], weather: { moo
   decor = Math.min(DECOR_MOOD_CAP, decor);
   if (decor) factors.push({ label: "Home décor", value: decor });
   if (weather.moodDelta) factors.push({ label: weather.label, value: weather.moodDelta });
+  for (const m of moodlets) factors.push({ label: m.label, value: m.strength });
   for (const id of NEED_IDS) if (needs[id] <= 10) factors.push({ label: `Very low ${id}`, value: -5 });
   const score = Math.max(0, Math.min(100, Math.round(factors.reduce((s, f) => s + f.value, 0))));
   const label = score < 25 ? "Miserable" : score < 45 ? "Low" : score < 65 ? "Okay" : score < 80 ? "Good" : "Great";

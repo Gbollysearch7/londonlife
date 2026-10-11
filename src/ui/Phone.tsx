@@ -6,12 +6,16 @@ import type { State } from "@/client/api";
 import Sheet from "./Sheet";
 import { money } from "./format";
 import { StoriesApp, TreasureApp } from "./Stories";
+import { GoalsApp, PeopleApp, PerksApp } from "./Goals";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
+  { id: "goals", name: "Goals", icon: "★" },
   { id: "stories", name: "Stories", icon: "✎" },
   { id: "treasure", name: "Treasure", icon: "◈" },
   { id: "jobs", name: "Jobs", icon: "◆" },
+  { id: "perks", name: "Perks", icon: "✦" },
+  { id: "people", name: "People", icon: "☺" },
   { id: "missions", name: "Missions", icon: "✓" },
   { id: "bank", name: "Bank", icon: "£" },
   { id: "skills", name: "Skills", icon: "↑" },
@@ -60,6 +64,9 @@ const TITLES: Record<string, string> = {
   inventory: "Kitchen cupboard",
   tour: "Your first twenty minutes",
   stories: "Stories",
+  goals: "Goals",
+  perks: "Perks",
+  people: "People",
   treasure: "Daily treasure",
   help: "Help",
   settings: "Settings",
@@ -87,7 +94,9 @@ export function PhoneSheet({ s }: { s: State }) {
               const badge =
                 a.id === "missions"
                   ? s.missions.items.filter((m) => m.claimable).length + (s.missions.bonus.claimable ? 1 : 0)
-                  : a.id === "stories"
+                  : a.id === "goals"
+                    ? s.goals.wishes.filter((w) => w.claimable).length + s.goals.ambition.milestones.filter((m) => m.claimable).length
+                    : a.id === "stories"
                     ? Number(!!s.stories.active?.here)
                     : a.id === "treasure"
                       ? Number(!s.treasure.found)
@@ -121,6 +130,9 @@ export function PhoneSheet({ s }: { s: State }) {
           </ul>
         </>
       )}
+      {current === "goals" && <GoalsApp s={s} />}
+      {current === "perks" && <PerksApp s={s} />}
+      {current === "people" && <PeopleApp s={s} />}
       {current === "stories" && <StoriesApp s={s} />}
       {current === "treasure" && <TreasureApp s={s} />}
       {current === "jobs" && <Jobs s={s} />}
