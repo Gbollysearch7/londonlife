@@ -63,6 +63,8 @@ const BY_ID: Record<string, Visual> = {
   yard_repair: { pose: "work", particles: "sparkle" },
   yard_network: { pose: "snack", prop: "cup", particles: "chat" },
   yard_bug_bash: { pose: "type", particles: "code", seated: true },
+  company_work_yard: { pose: "type", particles: "sparkle", seated: true },
+  company_work_home: { pose: "type", particles: "sparkle", seated: true },
   pub_quiz: { pose: "sit", particles: "chat", seated: true },
   watch_match: { pose: "talk" },
   pub_lunch: { pose: "eat", particles: "steam", seated: true },

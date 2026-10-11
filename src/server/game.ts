@@ -19,6 +19,8 @@ import { wardrobeView } from "./wardrobe";
 import { conditionClearsAt, conditionDecay, healthView, setCondition, settleDeliveries, settleHealth } from "./health";
 import { classAttended, classBlocker, classesToday, courseRows, coursesView, type CourseRow } from "./courses";
 import { moodletForActivity, perkEffects } from "@/content/goals";
+import { companyWorked, hasCompany } from "./company";
+import { isListed, marketView, settleShared } from "./market";
 
 // ───────────────────────────── rows ─────────────────────────────
 
@@ -236,6 +238,7 @@ export async function settle(tx: Tx, c: CharRow, now: Date) {
 
   notices.push(...(await settleDueShift(tx, c, now)));
   notices.push(...(await settleEconomy(tx, c, now)));
+  notices.push(...(await settleShared(tx, c, now)));
 
   const arrived = await tx.query(
     `UPDATE journeys SET status = 'arrived', settled_at = $2
@@ -333,6 +336,7 @@ export async function completeActivity(tx: Tx, c: CharRow, row: Record<string, u
     await classAttended(tx, c, def.eventData.course);
     parts.push("lesson quiz unlocked");
   }
+  if (def.event === "company_work") parts.push(...(await companyWorked(tx, c, row.id as string, new Date(Math.min(new Date(row.ends_at as Date).getTime(), now.getTime())))));
   const moodlet = bonus?.moodlet ?? moodletForActivity(def.id, def.event, def.eventData?.skill as SkillId | undefined);
   if (moodlet) {
     const m = await grantMoodlet(tx, c, moodlet, def.id, now);
@@ -366,6 +370,7 @@ export interface Ctx {
   courses: Record<string, CourseRow>;
   classesToday: number;
   now: Date;
+  hasCompany: boolean;
 }
 
 export async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
@@ -411,6 +416,7 @@ export async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
     courses: await courseRows(tx, c.id),
     classesToday: await classesToday(tx, c.id, now),
     now,
+    hasCompany: await hasCompany(tx, c.id),
   };
 }
 
@@ -421,6 +427,7 @@ export function activityBlocker(def: ActivityDef, ctx: Ctx): string | null {
   if (ctx.shift) return "You're on shift. Leave your shift first.";
   if (ctx.running) return "Finish or cancel what you're doing first.";
   if (c.location !== def.location) return `Only at ${venue(def.location)?.name}.`;
+  if (def.requiresCompany && !ctx.hasCompany) return "Found a company first in the Company app.";
   const hour = londonHour(ctx.now);
   const place = venue(def.location);
   if (place && !isOpenAt(place, hour)) return `${place.name} is closed. Opens at ${hourLabel(place.hours![0])}.`;
@@ -639,6 +646,7 @@ export async function buyFurniture(tx: Tx, accountId: string, p: { defId: string
 async function ownedInstance(tx: Tx, c: CharRow, instanceId: string) {
   const res = await tx.query("SELECT * FROM furniture WHERE id = $1 AND character_id = $2", [instanceId, c.id]);
   if (!res.rowCount) throw new GameError("not_owned", "You don't own that item.");
+  if (await isListed(tx, instanceId)) throw new GameError("listed", "That item is listed on the Market. Cancel the listing first.");
   return res.rows[0];
 }
 
@@ -683,6 +691,7 @@ export async function sellFurniture(tx: Tx, accountId: string, p: { instanceId: 
   const c = await requireCharacter(tx, accountId);
   await settle(tx, c, now);
   await requireHomeIdle(tx, c, now);
+  if (await isListed(tx, p.instanceId)) throw new GameError("listed", "That item is listed on the Market. Cancel the listing first.");
   const del = await tx.query("DELETE FROM furniture WHERE id = $1 AND character_id = $2 RETURNING def_id, price_pence", [
     p.instanceId,
     c.id,
@@ -940,6 +949,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     wardrobe: await wardrobeView(tx, c),
     ...(await healthView(tx, c)),
     ...(await economyView(tx, c, now)),
+    ...(await marketView(tx, c, now)),
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };
   out.character.ambition.progress = goals.ambition.progress;
