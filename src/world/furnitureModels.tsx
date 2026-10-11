@@ -4,6 +4,7 @@
  * front facing +Z. One grid cell = 1 unit. Footprints match the catalogue exactly.
  */
 import type { ReactNode } from "react";
+import { PrestigeModel } from "./lateModels";
 
 const M = ({ c, r = 0.8, m = 0, e }: { c: string; r?: number; m?: number; e?: string }) => (
   <meshStandardMaterial color={c} roughness={r} metalness={m} emissive={e ?? "#000"} emissiveIntensity={e ? 1 : 0} />
@@ -67,6 +68,11 @@ export function FurnitureModel({ defId, colour, w, d }: { defId: string; colour:
   switch (defId) {
     case "single_bed":
       return <Bed w={1} colour={colour} />;
+    case "original_artwork":
+    case "home_cinema":
+    case "grand_piano":
+    case "workstation":
+      return <PrestigeModel defId={defId} colour={colour} />;
     case "double_bed":
       return <Bed w={2} colour={colour} />;
     case "armchair":

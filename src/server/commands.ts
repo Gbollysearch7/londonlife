@@ -15,6 +15,7 @@ import * as company from "./company";
 import * as playerJobs from "./playerJobs";
 import * as tables from "./tables";
 import * as civic from "./civic";
+import * as late from "./lateGame";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -94,6 +95,16 @@ const HANDLERS: Record<string, Handler> = {
   Rematch: tables.rematch as Handler,
   StandForElection: civic.standForElection as Handler,
   CastVote: civic.castVote as Handler,
+  BuyVehicle: late.buyVehicle as Handler,
+  SellVehicle: late.sellVehicle as Handler,
+  ServiceVehicle: late.serviceVehicle as Handler,
+  PayVehicleUpkeep: late.payVehicleUpkeep as Handler,
+  BuyInsurance: late.buyInsurance as Handler,
+  CancelInsurance: late.cancelInsurance as Handler,
+  ClaimInsurance: late.claimInsurance as Handler,
+  AdoptPet: late.adoptPet as Handler,
+  CarePet: late.carePet as Handler,
+  RehomePet: late.rehomePet as Handler,
 };
 
 export interface CommandResult {

@@ -7,6 +7,7 @@ import { venue } from "@/content/world";
 import type { State } from "@/client/api";
 import { serverNow } from "@/client/store";
 import Avatar from "./Avatar";
+import { Bicycle, PlayerCar } from "./lateModels";
 import { TextLabel } from "./TextLabel";
 import type { Lighting } from "./lighting";
 
@@ -302,6 +303,13 @@ export default function StreetScene({ state, light }: { state: State; light: Lig
         <Bus groupRef={bus} />
       ) : j.mode === "taxi" ? (
         <Cab groupRef={bus} />
+      ) : j.mode === "drive" ? (
+        <PlayerCar groupRef={bus} colour={state.garage.riding?.colour ?? "#8C8C84"} defId={state.garage.riding?.defId ?? "compact_car"} />
+      ) : j.mode === "cycle" ? (
+        <group ref={avatar} position={[from, 0, 0.9]}>
+          <Bicycle colour={state.garage.riding?.colour ?? "#234C42"} scooter={state.garage.riding?.defId === "e_scooter"} />
+          <Avatar appearance={state.character.appearance} pose={state.garage.riding?.defId === "e_scooter" ? "idle" : "sit"} position={state.garage.riding?.defId === "e_scooter" ? [0, 0.2, -0.05] : [0, 0.36, -0.2]} />
+        </group>
       ) : (
         <group ref={avatar} position={[from, 0.12, -1.6]}>
           <Avatar appearance={state.character.appearance} pose="walk" />

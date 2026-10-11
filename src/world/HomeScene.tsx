@@ -16,6 +16,7 @@ import { useScene } from "./sceneStore";
 import { floorTexture, plasterTexture } from "./textures";
 import { TextLabel } from "./TextLabel";
 import { PartyGuests } from "./PartyGuests";
+import { HomePets } from "./lateModels";
 
 const deg = (r: number) => (r * Math.PI) / 180;
 
@@ -255,6 +256,7 @@ export default function HomeScene({ state, light }: { state: State; light: Light
       <TapRipple at={state.activity ? null : walkTarget} />
       <PlayerAvatar ref={player} appearance={state.character.appearance} mood={mood} grid={grid} goal={goal} spawn={[0, 0.6]} sceneKey="home" spawnRotY={0.3} />
       <PartyGuests state={state} />
+      <HomePets pets={state.pets.list} target={player} grid={grid} gridW={gridW} gridD={gridD} />
       <FloatingTexts target={player} />
       <CelebrationBurst target={player} />
       <ContactShadows position={[0, 0.01, 0]} opacity={0.35} scale={dist * 1.5} blur={2} far={3} resolution={512} />

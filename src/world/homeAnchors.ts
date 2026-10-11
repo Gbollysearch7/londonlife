@@ -90,12 +90,12 @@ export function homeSpot(activityId: string, placed: Placed[], gridW: number, gr
     const it = first(activityId);
     return it ? make(spotAt(it, gridW, gridD, "inside")) : null;
   }
-  if (activityId === "coding_sprint_home") {
-    const desk = first("desk");
+  if (activityId === "coding_sprint_home" || activityId === "workstation_sprint") {
+    const desk = first(activityId === "workstation_sprint" ? "workstation" : "desk");
     return desk ? make(spotAt(desk, gridW, gridD, "desk")) : null;
   }
   // Seated-by-preference activities: use a chair or sofa when there is one, otherwise stand at the item.
-  if (activityId === "watch_tv" || activityId === "relax" || activityId.startsWith("read_") || activityId === "practise_guitar" || activityId.startsWith("eat_")) {
+  if (activityId === "watch_tv" || activityId === "watch_cinema" || activityId === "relax" || activityId.startsWith("read_") || activityId === "practise_guitar" || activityId.startsWith("eat_")) {
     if (seat) return make(spotAt(seat, gridW, gridD, "sit"));
     const fallback = def.requires ? first(def.requires) : first("fridge") ?? first("hob");
     if (fallback) return make({ ...spotAt(fallback, gridW, gridD, "use"), seat: false });

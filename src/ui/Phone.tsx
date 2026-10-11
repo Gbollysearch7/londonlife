@@ -12,6 +12,7 @@ import { StaffApp } from "./Household";
 import { FeedApp, MessagesApp, PeopleHub, PrivacySettings, RankingsApp } from "./Social";
 import { BoardApp, CompanyApp, MarketApp } from "./Market";
 import { GamesApp, GovernmentApp } from "./Games";
+import { InsuranceApp, PetsApp, VehiclesApp, lateBadge } from "./LateGame";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
@@ -36,6 +37,9 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "board", name: "Player work", icon: "◇" },
   { id: "games", name: "Games", icon: "◉" },
   { id: "government", name: "Government", icon: "⚑" },
+  { id: "vehicles", name: "Vehicles", icon: "◎" },
+  { id: "insurance", name: "Insurance", icon: "☂" },
+  { id: "pets", name: "Pets", icon: "♥" },
   { id: "skills", name: "Skills", icon: "↑" },
   { id: "profile", name: "Profile", icon: "☺" },
   { id: "inventory", name: "Kitchen", icon: "◫" },
@@ -47,6 +51,9 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
 
 const LATER: { name: string; when: string }[] = [
   { name: "Vehicles", when: "Milestone 5" },
+  { name: "Staff", when: "Milestone 2 (next)" },
+  { name: "Messages", when: "Milestone 3" },
+  { name: "Contacts", when: "Milestone 3" },
   { name: "Invitations", when: "Milestone 3" },
   { name: "Family", when: "Milestone 3" },
   { name: "Player work", when: "Milestone 3" },
@@ -59,7 +66,6 @@ const LATER: { name: string; when: string }[] = [
   { name: "City feed", when: "Milestone 3" },
   { name: "Police", when: "Milestone 4" },
   { name: "Court", when: "Milestone 4" },
-  { name: "Insurance", when: "Milestone 5" },
   { name: "Transport Co", when: "Milestone 5" },
   { name: "Advertising", when: "Milestone 5" },
 ];
@@ -84,6 +90,9 @@ const TITLES: Record<string, string> = {
   board: "Player work",
   games: "Games",
   government: "City government",
+  vehicles: "Vehicles",
+  insurance: "Insurance",
+  pets: "Pets",
   goals: "Goals",
   perks: "Perks",
   people: "People",
@@ -133,7 +142,7 @@ export function PhoneSheet({ s }: { s: State }) {
                     ? Number(!!s.stories.active?.here)
                     : a.id === "treasure"
                       ? Number(!s.treasure.found)
-                      : 0;
+                      : lateBadge(a.id, s);
               return (
                 <li key={a.id}>
                   <button className={styles.app} onClick={() => open(a.id)}>
@@ -184,6 +193,9 @@ export function PhoneSheet({ s }: { s: State }) {
       {current === "board" && <BoardApp s={s} />}
       {current === "games" && <GamesApp s={s} />}
       {current === "government" && <GovernmentApp s={s} />}
+      {current === "vehicles" && <VehiclesApp s={s} />}
+      {current === "insurance" && <InsuranceApp s={s} />}
+      {current === "pets" && <PetsApp s={s} />}
       {current === "skills" && <Skills s={s} />}
       {current === "profile" && <Profile s={s} />}
       {current === "inventory" && <Inventory s={s} />}

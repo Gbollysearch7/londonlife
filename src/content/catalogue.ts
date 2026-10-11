@@ -1,5 +1,6 @@
 import type { FurnitureDef, ItemDef, RecipeDef } from "./types";
 import { CHEF_MEALS } from "./household";
+import { PET_FOOD, PRESTIGE_FURNITURE } from "./lateGame";
 
 const WOODS = ["#B98B5E", "#7A5134", "#D9C3A0"];
 const FABRICS = ["#234C42", "#BC3D3B", "#2F4A6B", "#C69C58", "#8C8C84"];
@@ -27,6 +28,7 @@ export const FURNITURE: FurnitureDef[] = [
   { id: "poster", name: "Gig Poster", category: "Decor", pricePence: 800, w: 1, d: 1, surface: "wall", quality: 1, colours: ["#BC3D3B", "#2F4A6B", "#C69C58"], enables: [], decor: 1, blurb: "Hangs on a wall." },
   { id: "party_speakers", name: "Party Speakers", category: "Fun", pricePence: 7200, w: 1, d: 1, surface: "floor", quality: 2, colours: ["#1A1A1A", "#F2F0EA", "#BC3D3B"], enables: ["speakers"], blurb: "Turn it up: throw a house party at home (one a night)." },
   { id: "wall_clock", name: "Wall Clock", category: "Decor", pricePence: 1500, w: 1, d: 1, surface: "wall", quality: 1, colours: ["#17232B", "#F2F0EA"], enables: [], decor: 1, blurb: "Hangs on a wall." },
+  ...PRESTIGE_FURNITURE,
 ];
 
 export const ITEMS: ItemDef[] = [
@@ -43,6 +45,7 @@ export const ITEMS: ItemDef[] = [
   { id: "cheese", name: "Cheddar", kind: "grocery", pricePence: 150, unit: "portion" },
   { id: "chickpeas", name: "Chickpeas", kind: "grocery", pricePence: 90, unit: "tin" },
   { id: "peppers", name: "Peppers", kind: "grocery", pricePence: 80, unit: "portion" },
+  PET_FOOD,
   { id: "tea_and_toast", name: "Tea and toast", kind: "meal", eat: { hunger: 20, energy: 6, fun: 3 } },
   { id: "beans_on_toast", name: "Beans on toast", kind: "meal", eat: { hunger: 35, fun: 2 } },
   { id: "egg_on_toast", name: "Egg on toast", kind: "meal", eat: { hunger: 30, energy: 4 } },
