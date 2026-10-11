@@ -15,6 +15,7 @@ import m014 from "../../db/migrations/014_family.sql";
 import m015 from "../../db/migrations/015_property.sql";
 import m016 from "../../db/migrations/016_games2.sql";
 import m017 from "../../db/migrations/017_fleets_ads.sql";
+import m018 from "../../db/migrations/018_platform.sql";
 
 /** Every migration, in order. Keep in sync with db/migrations. */
 export const MIGRATIONS: [string, string][] = [
@@ -35,6 +36,7 @@ export const MIGRATIONS: [string, string][] = [
   ["015_property.sql", m015],
   ["016_games2.sql", m016],
   ["017_fleets_ads.sql", m017],
+  ["018_platform.sql", m018],
 ];
 
 /** PGlite has gen_random_uuid built in; the pgcrypto extension line is dropped. */

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CanvasTexture, SRGBColorSpace, type Group, type Object3D, type Sprite } from "three";
 import { useFx } from "@/client/fx";
+import { useProfile } from "@/client/graphics";
 
 // ───────────────────────────── glyph textures ─────────────────────────────
 
@@ -122,11 +123,13 @@ function rand(i: number, k: number) {
 /** A small looping emitter of glyph sprites. Stateless per particle (position derived from time). */
 export function Particles({ kind, position = [0, 0, 0], intensity = 1 }: { kind: ParticleKind; position?: [number, number, number]; intensity?: number }) {
   const cfg = KIND[kind];
-  const count = Math.max(1, Math.round(cfg.count * intensity));
+  // Low quality halves particle counts; reduced motion freezes them in place (still visible, no drifting).
+  const { particles, motion } = useProfile();
+  const count = Math.max(1, Math.round(cfg.count * intensity * particles));
   const refs = useRef<(Sprite | null)[]>([]);
   const textures = useMemo(() => Array.from({ length: count }, (_, i) => glyph(cfg.chars[i % cfg.chars.length], cfg.colours[i % cfg.colours.length])), [cfg, count]);
   useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
+    const t = motion ? clock.getElapsedTime() : cfg.life * 0.35;
     for (let i = 0; i < count; i++) {
       const s = refs.current[i];
       if (!s) continue;

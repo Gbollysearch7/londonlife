@@ -11,6 +11,7 @@ import { LadderSection } from "./Ladder";
 import styles from "./ui.module.css";
 import g from "./games.module.css";
 import d from "./draughts.module.css";
+import { FocusScope } from "./a11y";
 
 /** Which table's board is open on screen (local presentation state only). */
 interface TableUi {
@@ -106,7 +107,8 @@ function Board({ tableId }: { tableId: string }) {
 
   if (!t)
     return (
-      <div className={g.ftOverlay} role="dialog" aria-label="Games table">
+      <FocusScope trap focusKey="loading">
+      <div className={g.ftOverlay} role="dialog" aria-modal="true" aria-label="Games table">
         <div className={g.ftPanel}>
           <p>{err ?? "Loading the table…"}</p>
           <button className="btn secondary" onClick={close}>
@@ -114,6 +116,7 @@ function Board({ tableId }: { tableId: string }) {
           </button>
         </div>
       </div>
+      </FocusScope>
     );
 
   const me = t.players.find((p) => p.you);
@@ -145,6 +148,7 @@ function Board({ tableId }: { tableId: string }) {
   })() : -1;
 
   return (
+    <FocusScope trap focusKey="table">
     <div className={g.ftOverlay} role="dialog" aria-modal="true" aria-label={`${t.gameName} table`}>
       <div className={g.ftPanel}>
         <div className={g.ftHead}>
@@ -288,6 +292,7 @@ function Board({ tableId }: { tableId: string }) {
         </details>
       </div>
     </div>
+    </FocusScope>
   );
 }
 

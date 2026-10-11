@@ -18,6 +18,7 @@ import { FamilyApp, InvitationsApp, familyBadge } from "./Family";
 import { InvestApp } from "./Invest";
 import { AdvertisingApp, TransportApp } from "./Fleets";
 import styles from "./ui.module.css";
+import { AccountSecurity, DevRecoveryDemo, GraphicsSettings } from "./AccountSettings";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
   { id: "goals", name: "Goals", icon: "★" },
@@ -567,6 +568,8 @@ function Settings() {
       <div className={styles.help}>
         <p className="tiny">This is the test build. Progress is saved in this browser only and timers run ×{process.env.LL_TEST_BUILD_TIME_SCALE}.</p>
         <PrivacySettings />
+        <GraphicsSettings />
+        <DevRecoveryDemo />
         {ask ? (
           <div className={styles.quotes}>
             <button className="btn danger" disabled={busy} onClick={async () => (setBusy(true), await postJson("/api/auth/signout", {}))}>
@@ -586,6 +589,8 @@ function Settings() {
   return (
     <div className={styles.help}>
       <PrivacySettings />
+      <GraphicsSettings />
+      <AccountSecurity />
       <p className="tiny">Sound and notification settings arrive with those features. Your progress saves automatically after every action.</p>
       <button
         className="btn secondary"

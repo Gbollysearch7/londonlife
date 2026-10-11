@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { postJson } from "@/client/api";
+import ForgotPassword from "./ForgotPassword";
 import Skyline from "./Skyline";
 import styles from "./welcome.module.css";
 
@@ -11,6 +12,7 @@ export default function Welcome() {
   const [adult, setAdult] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [forgot, setForgot] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +40,10 @@ export default function Welcome() {
         <p className={styles.premise}>
           Start with a small room and six needs. Work, learn, cook, take the bus, furnish your place and make London yours.
         </p>
+        {forgot ? (
+          <ForgotPassword initialEmail={email} onBack={() => setForgot(false)} />
+        ) : (
+        <>
         <div className={styles.tabs} role="tablist">
           <button role="tab" aria-selected={mode === "signup"} className={mode === "signup" ? styles.active : ""} onClick={() => setMode("signup")}>
             Create account
@@ -79,6 +85,13 @@ export default function Welcome() {
             {busy ? "One moment…" : mode === "signup" ? "Create account" : "Sign in"}
           </button>
         </form>
+        {mode === "signin" && (
+          <button type="button" className="btn secondary block" style={{ marginTop: 10 }} onClick={() => setForgot(true)}>
+            Forgotten your password?
+          </button>
+        )}
+        </>
+        )}
         <p className="tiny" style={{ marginTop: 18 }}>
           Your email is only used to sign in. It is never shown to other players. Everything in London Life — people, places, prices — is fictional.
         </p>

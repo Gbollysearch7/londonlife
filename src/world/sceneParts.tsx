@@ -6,6 +6,7 @@ import { BackSide, Color, type Group, type Mesh, type ShaderMaterial } from "thr
 import type { ThreeEvent } from "@react-three/fiber";
 import { TextLabel } from "./TextLabel";
 import type { Lighting } from "./lighting";
+import { useProfile } from "@/client/graphics";
 
 /** Gradient sky sphere (zenith → horizon) that follows the lighting model. */
 export function SkyDome({ light }: { light: Lighting }) {
@@ -32,6 +33,7 @@ export function SkyDome({ light }: { light: Lighting }) {
 /** Key light with soft shadows framed to the scene, plus sky/ground fill. */
 export function SceneLights({ light, size, interior = true }: { light: Lighting; size: number; interior?: boolean }) {
   const s = size * 0.75;
+  const { shadowMapSize } = useProfile(); // smaller shadow maps on small screens and Low quality
   return (
     <>
       {/* Interiors keep warm room light after dark so they never become unreadable (spec ch. 28 lighting). */}
@@ -41,7 +43,7 @@ export function SceneLights({ light, size, interior = true }: { light: Lighting;
         intensity={light.sunIntensity * (interior ? 0.85 : 1)}
         color={light.sun}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[shadowMapSize, shadowMapSize]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
         shadow-camera-left={-s}
@@ -75,8 +77,9 @@ export function HotspotMarker({
   useCursor(hover);
   const ring = useRef<Mesh>(null);
   const chip = useRef<Group>(null);
+  const { motion } = useProfile();
   useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
+    const t = motion ? clock.getElapsedTime() : 0; // reduced motion: markers stay still
     if (ring.current) {
       const k = 1 + Math.sin(t * 3) * 0.06;
       ring.current.scale.set(k, k, k);

@@ -6,6 +6,7 @@ import { firstFreeSpot } from "@/sim/placement";
 import { useScene } from "@/world/sceneStore";
 import { ActionRow, GroceryCounter } from "./Sheets";
 import styles from "./ui.module.css";
+import { FocusScope } from "./a11y";
 
 /**
  * The card that rises when you tap something in the world: what it is, what you can do with it,
@@ -41,7 +42,8 @@ export function HotspotCard({ s }: { s: State }) {
   const canArrange = !!furniture && s.character.location === "home" && !s.activity && !s.journey;
 
   return (
-    <section className={styles.hotspot} role="dialog" aria-label={hotspot.title}>
+    <FocusScope focusKey={hotspot.id}>
+    <section className={styles.hotspot} role="dialog" aria-label={hotspot.title} tabIndex={-1}>
       <header className={styles.hotspotHead}>
         <div>
           <strong>{hotspot.title}</strong>
@@ -130,5 +132,6 @@ export function HotspotCard({ s }: { s: State }) {
         )}
       </div>
     </section>
+    </FocusScope>
   );
 }

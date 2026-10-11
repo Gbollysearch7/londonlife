@@ -16,6 +16,7 @@ import { PhoneSheet } from "./Phone";
 import { ShiftPanel } from "./ShiftPanel";
 import { VisitBar } from "./Social";
 import { HostHomePanel } from "./Family";
+import { SceneDirectory } from "./SceneDirectory";
 import styles from "./ui.module.css";
 
 const World = dynamic(() => import("@/world/World"), { ssr: false });
@@ -119,6 +120,7 @@ export default function Game() {
         <VisitBar s={state} />
         <HostHomePanel s={state} />
         <Warnings s={state} />
+        <SceneDirectory s={state} />
       </div>
       <NeedsBar s={state} />
       <div className={styles.bottomCentre}>

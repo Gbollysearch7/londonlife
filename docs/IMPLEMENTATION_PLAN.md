@@ -141,8 +141,8 @@ Unchanged from spec chapter 38. Milestone 3 (shared life: presence, chat, consen
 | 32 | Screen contracts | M1–M2 | In progress |
 | 33 | First twenty minutes | M1 | Done (e2e passes) |
 | 34 | Wardrobe, pets, prestige | M2/M5 | In progress — wardrobe and salon done; pets and prestige M5 |
-| 35 | Architecture | M1 | Done for single-player scope (realtime pending) |
-| 36 | Assets, performance, accessibility | M1 onward | In progress — keyboard/labels/reduced motion; accessible alternatives for 3D-only actions; perf unmeasured |
+| 35 | Architecture | M1 | Done for single-player scope (realtime pending); M5 platform: password reset/change, sign out everywhere, attempt throttling, `/api/health`, tested JSON backup/restore |
+| 36 | Assets, performance, accessibility | M1 onward | In progress — keyboard/labels/reduced motion; "What's here" keyboard list of every scene hotspot; focus management for cards and overlays; High/Low graphics setting, adaptive render scale, capped shadow maps, instanced books/bunting/dance floors; in-game perf readout. Not yet measured on real phones |
 | 37 | Acceptance suite | Every milestone | In progress — A–R integration groups, two e2e routes |
 
 ## Open decisions still with the owner

@@ -11,6 +11,7 @@ import { brickTexture, floorTexture, panelTexture, plasterTexture } from "../tex
 import type { PropSpec, Shell, WallSpec } from "./props";
 import { PropA } from "./kit_a";
 import { PropB } from "./kit_b";
+import { InstancedBooks, InstancedBunting, InstancedDanceFloor } from "./instanced";
 
 export type { PropSpec, PropType, Shell, WallSpec } from "./props";
 
@@ -93,35 +94,9 @@ function Chair({ c = DARKWOOD }: { c?: string }) {
   );
 }
 
+/** One instanced draw call for every tile (see ./instanced). */
 function DanceFloor({ w = 4, d = 3 }: { w?: number; d?: number }) {
-  const refs = useRef<(Mesh | null)[]>([]);
-  const cols = Math.round(w);
-  const rows = Math.round(d);
-  const palette = ["#bc3d3b", "#c69c58", "#2f4a6b", "#7a3f8f", "#2f8a5f"];
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    refs.current.forEach((m, i) => {
-      if (!m) return;
-      const on = Math.sin(t * 3 + (i % cols) * 1.3 + Math.floor(i / cols) * 0.7) > 0.3;
-      const mat = m.material as unknown as { emissiveIntensity: number };
-      mat.emissiveIntensity = on ? 1.1 : 0.12;
-    });
-  });
-  return (
-    <group>
-      {Array.from({ length: cols * rows }, (_, i) => {
-        const x = (i % cols) - (cols - 1) / 2;
-        const z = Math.floor(i / cols) - (rows - 1) / 2;
-        const col = palette[(i * 7) % palette.length];
-        return (
-          <mesh key={i} ref={(m) => void (refs.current[i] = m)} position={[x, 0.012, z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-            <planeGeometry args={[0.96, 0.96]} />
-            <meshStandardMaterial color={col} emissive={col} emissiveIntensity={0.3} roughness={0.3} />
-          </mesh>
-        );
-      })}
-    </group>
-  );
+  return <InstancedDanceFloor w={w} d={d} />;
 }
 
 function River({ w = 20, d = 4 }: { w?: number; d?: number }) {
@@ -323,15 +298,9 @@ export function Prop({ s, night }: { s: PropSpec; night: boolean }) {
     }
     case "bunting": {
       const w = s.w ?? 9;
-      const n = Math.round(w / 0.8);
       body = (
         <group position={[0, s.y ?? 3, 0]}>
-          {Array.from({ length: n }, (_, i) => (
-            <mesh key={i} position={[-w / 2 + (i + 0.5) * (w / n), -Math.sin((i / (n - 1)) * Math.PI) * 0.25, 0]} rotation={[0, 0, Math.PI]}>
-              <coneGeometry args={[0.16, 0.3, 3]} />
-              <meshStandardMaterial color={["#BC3D3B", "#C69C58", "#234C42", "#2F4A6B"][i % 4]} />
-            </mesh>
-          ))}
+          <InstancedBunting w={w} />
         </group>
       );
       break;
@@ -604,15 +573,10 @@ export function Prop({ s, night }: { s: PropSpec; night: boolean }) {
       break;
     case "bookcase": {
       const w = s.w ?? 2;
-      const cols = ["#234C42", "#BC3D3B", "#C69C58", "#2F4A6B", "#7a6a5a", "#e9e2d3"];
       body = (
         <group>
           <B p={[0, 1.2, -0.05]} s={[w, 2.4, 0.4]} c={c ?? "#5a3f2a"} />
-          {[0.3, 0.85, 1.4, 1.95].map((y, row) =>
-            Array.from({ length: Math.round(w / 0.11) - 1 }, (_, i) => (
-              <B key={`${row}${i}`} p={[-w / 2 + 0.12 + i * 0.11, y + 0.16, 0.1]} s={[0.085, 0.32 - ((i + row) % 3) * 0.05, 0.26]} c={cols[(i * 3 + row * 2) % cols.length]} />
-            )),
-          )}
+          <InstancedBooks w={w} />
         </group>
       );
       break;

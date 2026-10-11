@@ -13,6 +13,8 @@ import VisitScene from "./VisitScene";
 import { clockHour, lightingFor } from "./lighting";
 import { useScene } from "./sceneStore";
 import { LAYOUTS } from "./venues/layouts";
+import { useProfile, useGraphics } from "@/client/graphics";
+import { AdaptiveResolution, PerfOverlay, PerfProbe } from "./Performance";
 
 type View = "home" | "street" | "venue" | "map" | "visit";
 
@@ -42,6 +44,9 @@ export default function World({ state }: { state: State }) {
   const view: View = sheet === "map" ? "map" : state.journey ? "street" : visit ? "visit" : state.character.location === "home" ? "home" : "venue";
   const grid = view === "visit" && visit ? Math.max(visit.home.gridW, visit.home.gridD) : Math.max(state.home.tier.gridW, state.home.tier.gridD);
   const sceneKey = `${view}-${view === "visit" ? visit?.hostId : state.character.location}`;
+  // Graphics quality (Settings) picks shadows, antialiasing and the render-scale range; changing it rebuilds the canvas.
+  const profile = useProfile();
+  const quality = useGraphics((g) => g.quality);
   // Portrait screens need the camera further back to frame the same scene.
   const k = typeof window !== "undefined" && window.innerWidth < window.innerHeight ? 1.55 : 1;
   const layout = LAYOUTS[state.character.location];
@@ -72,14 +77,16 @@ export default function World({ state }: { state: State }) {
   return (
     <>
       <Canvas
-        key={sceneKey}
-        shadows="soft"
-        dpr={[1, 1.75]}
+        key={`${sceneKey}-${quality}`}
+        shadows={profile.shadows ? "soft" : false}
+        dpr={profile.dpr}
         camera={camera}
-        gl={{ antialias: true, preserveDrawingBuffer: true }}
+        gl={{ antialias: profile.antialias, preserveDrawingBuffer: true }}
         onPointerMissed={() => useScene.getState().openHotspot(null)}
         aria-label={view === "map" ? "Map of London" : view === "visit" ? `${visit?.hostName}'s home (visiting)` : view === "home" ? "Your home" : view === "street" ? "London street" : "Venue interior"}
       >
+        <AdaptiveResolution range={profile.dpr} />
+        <PerfProbe />
         <Suspense fallback={null}>
           {view === "home" && <HomeScene state={state} light={light} />}
           {view === "visit" && visit && <VisitScene visit={visit} state={state} light={light} />}
@@ -92,6 +99,7 @@ export default function World({ state }: { state: State }) {
         aria-hidden
         style={{ position: "absolute", inset: 0, background: "#17232b", opacity: fading ? 1 : 0, transition: fading ? "none" : "opacity .45s", pointerEvents: "none" }}
       />
+      <PerfOverlay />
     </>
   );
 }

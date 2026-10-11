@@ -1,0 +1,28 @@
+/* Platform UI: scene directory, account and graphics settings. Colours come from the global tokens;
+   tests/unit/platformClient.test.ts checks every text/background pair used here meets WCAG AA (4.5:1). */
+
+.dirToggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; background: rgba(251, 248, 242, 0.96); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; min-height: 40px; font-weight: 600; font-size: 13.5px; box-shadow: 0 2px 8px rgba(23,35,43,.08); }
+.dirToggle span { color: var(--ink-2); font-weight: 500; font-size: 12.5px; }
+.dirPanel { background: rgba(251, 248, 242, 0.98); border: 1px solid var(--line); border-radius: 12px; padding: 8px; box-shadow: var(--shadow); max-height: min(46dvh, 380px); overflow: auto; }
+.dirPanel h2 { font-family: var(--font-body); font-size: 13px; color: var(--ink-2); margin: 2px 4px 8px; font-weight: 600; }
+.dirList { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.dirItem { width: 100%; text-align: left; display: grid; gap: 1px; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-height: 44px; }
+.dirItem:hover { background: #fff; }
+.dirItem strong { font-size: 14px; }
+.dirItem span { font-size: 12.5px; color: var(--ink-2); }
+
+.section { display: grid; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }
+.section h3 { font-family: var(--font-body); font-size: 15px; font-weight: 700; margin: 0; }
+.seg { display: inline-grid; grid-auto-flow: column; gap: 4px; background: var(--ivory-2); border-radius: 10px; padding: 3px; border: 0; margin: 0; }
+.seg label { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: 14px; color: var(--ink); cursor: pointer; min-height: 36px; }
+.seg input { accent-color: var(--green); margin: 0; }
+.seg label:has(input:checked) { background: var(--paper); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.seg label:has(input:focus-visible) { outline: 3px solid var(--gold); outline-offset: 1px; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+.check input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--green); flex: none; }
+.hint { font-size: 13px; color: var(--ink-2); margin: 0; }
+
+.devBox { border: 2px dashed #7b5a1d; background: #f1e3c4; color: #17232b; border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+.devLabel { display: inline-block; justify-self: start; background: #7b5a1d; color: #fff; font-weight: 800; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; border-radius: 6px; padding: 2px 8px; }
+.devLink { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-all; background: #fbf8f2; color: #17232b; border-radius: 8px; padding: 6px 8px; }
+.ok { color: #1d5a45; font-size: 14px; margin: 0; }

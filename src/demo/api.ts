@@ -5,7 +5,8 @@
 import type { GameState } from "@/server/game";
 import { loadStateFor, loadTableFor, runCommand, socialQueryFor } from "@/server/commands";
 import type { TableView } from "@/server/tables";
-import { GameError } from "./db";
+import { GameError, pool } from "./db";
+import { completePasswordReset, requestPasswordReset } from "@/server/recovery";
 import { localAccountId, resetSave, saveNow } from "./boot";
 
 export type State = Extract<GameState, { character: object }> & { character: NonNullable<GameState["character"]> };
@@ -47,6 +48,24 @@ export async function postJson(url: string, _data?: unknown) {
   if (url === "/api/auth/signout") {
     await resetSave();
     return new Promise(() => {});
+  }
+  // Account recovery runs the real rules on the local player; the link is returned for an on-screen,
+  // development-only display because the test build has no email.
+  if (url === "/api/auth/reset/request" || url === "/api/auth/reset/complete") {
+    try {
+      if (url === "/api/auth/reset/request") {
+        const acc = await pool().query("SELECT email FROM accounts WHERE id = $1", [localAccountId()]);
+        const { token } = await requestPasswordReset(String(acc.rows[0]?.email ?? ""), "local", new Date());
+        void saveNow();
+        return { ok: true, token };
+      }
+      const body = (_data ?? {}) as { token?: string; password?: string };
+      await completePasswordReset(String(body.token ?? ""), String(body.password ?? ""), "local", new Date());
+      void saveNow();
+      return { ok: true, message: "Password set. The test build has no sign-in screen; in the real game you would now sign in with it." };
+    } catch (err) {
+      throw toApiError(err);
+    }
   }
   throw new ApiError("unsupported", "Not available in the test build.");
 }
