@@ -1,7 +1,8 @@
 import { defineConfig } from "@playwright/test";
 import fs from "node:fs";
 
-const chromium = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+// PW_CHROMIUM lets a machine use an already-installed Chrome instead of Playwright's download.
+const chromium = process.env.PW_CHROMIUM ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -11,7 +12,7 @@ export default defineConfig({
     baseURL: "http://localhost:3100",
     viewport: { width: 1280, height: 800 },
     launchOptions: fs.existsSync(chromium)
-      ? { executablePath: chromium, args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader"] }
+      ? { executablePath: chromium, args: ["--use-gl=swiftshader", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] }
       : { args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader"] },
   },
   webServer: {
