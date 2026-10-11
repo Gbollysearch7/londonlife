@@ -9,12 +9,15 @@ export default function Sheet({
   onBack,
   children,
   wide,
+  half,
 }: {
   title: string;
   onClose: () => void;
   onBack?: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  /** On phones, take only the lower half so the 3D view stays visible (the map). */
+  half?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -33,7 +36,7 @@ export default function Sheet({
     };
   }, [onClose]);
   return (
-    <aside className={`${styles.sheet} ${wide ? styles.wide : ""}`} role="dialog" aria-label={title} tabIndex={-1} ref={ref}>
+    <aside className={`${styles.sheet} ${wide ? styles.wide : ""} ${half ? styles.half : ""}`} role="dialog" aria-label={title} tabIndex={-1} ref={ref}>
       <header className={styles.sheetHead}>
         {onBack ? (
           <button className={styles.iconBtn} onClick={onBack} aria-label="Back">

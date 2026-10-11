@@ -10,6 +10,7 @@ import { cmd, ledgerMatches, makeAccount, makeCharacter, resetDb, state } from "
 const T0 = new Date("2026-10-10T13:00:00Z");
 const after = (d: Date, ms: number) => new Date(d.getTime() + ms);
 
+
 beforeAll(async () => {
   await migrate(process.env.DATABASE_URL!);
 });
@@ -119,5 +120,28 @@ describe("J · daily treasure", () => {
     const s = await state(acc, T0);
     expect(s.treasure.anchor).toBeNull();
     expect(s.treasure.clue).toBe(spot.clue);
+  });
+});
+
+describe("I2 · story integrity", () => {
+  it("choice XP pays once, so replaying a story can't farm skills", async () => {
+    const acc = await makeAccount();
+    await makeCharacter(acc, T0);
+    const xp = async () => (await state(acc, T0)).skills.find((k: any) => k.id === "music").xp;
+    const start = await xp();
+    for (let i = 0; i < 3; i++) {
+      await cmd(acc, "StartStory", { storyId: "open_mic_camden" }, T0);
+      await cmd(acc, "ChooseStory", { choiceId: "rehearse" }, T0);
+      await cmd(acc, "LeaveStory", {}, T0);
+    }
+    expect((await xp()) - start).toBe(15);
+  });
+
+  it("story choices wait while you're busy with an activity", async () => {
+    const acc = await makeAccount();
+    await makeCharacter(acc, T0);
+    await cmd(acc, "StartStory", { storyId: "night_bus" }, T0);
+    await cmd(acc, "StartActivity", { activityId: "cook_beans_on_toast" }, T0);
+    await expect(cmd(acc, "ChooseStory", { choiceId: "driver" }, after(T0, 1000))).rejects.toThrow(/Finish what you're doing/);
   });
 });

@@ -207,3 +207,18 @@ describe("P · wardrobe and salon", () => {
     await expect(cmd(acc, "ChangeHair", { hairStyle: 3, hairColour: 0 }, t)).rejects.toThrow(/already have/);
   });
 });
+
+describe("N2 · selling on the way out", () => {
+  it("moving out of a home you own sells it for 90% instead of losing it", async () => {
+    const acc = await makeAccount();
+    await makeCharacter(acc, T0, 0.999); // owns a one-bed
+    const before = (await state(acc, T0)).wallet.cashPence;
+    await cmd(acc, "MoveHome", { tierId: "outer_studio" }, T0);
+    const s = await state(acc, T0);
+    const sale = Math.round(HOME_TIERS.find((t) => t.id === "one_bed")!.pricePence! * 0.9);
+    const studio = HOME_TIERS.find((t) => t.id === "outer_studio")!.rentPence;
+    expect(s.wallet.cashPence - before).toBe(sale - studio * 3);
+    expect(s.housing.owned).toBe(false);
+    expect(await ledgerMatches(acc)).toBe(true);
+  });
+});

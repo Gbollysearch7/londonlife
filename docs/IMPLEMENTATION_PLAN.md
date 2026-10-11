@@ -65,48 +65,84 @@ Goal: a low-income character can play the spec's first twenty minutes (ch. 33), 
 - **Performance** has not been measured on real phones; the ch. 36 targets are untested.
 - Health/illness, login streak, wishes, perks, stories, careers and courses are Milestone 2.
 
-## Milestones 2–5
+## Milestone 2 — Depth, city content and game feel
 
-Per spec chapter 38. Differentiators slot in as follows once confirmed: commuting and local-regular status in Milestone 2; flatmates, the flat hunt and photo mode in Milestones 2–3; Claude-powered NPC conversations in Milestone 2 behind a budget cap; London calendar events, allotment and blue plaques in Milestones 2 and 5.
+Goal: turn the slice into a game that is fun to play for days — a living, walkable world; a city worth exploring; reasons to come back; and the full needs–skills–career–money–housing loop.
+
+**Status: In progress — the bulk is built (2026-10-11).** Every item below marked Done is covered by unit/integration tests (142 tests) and the two end-to-end routes (`first-twenty-minutes`, `day-out`) pass against the real Next.js server and Postgres. The production build passes.
+
+| # | Work item | Spec | Status | Evidence / notes |
+|---|---|---|---|---|
+| 2.1 | Living world: new avatar rig (two-segment limbs, blinking face, moods, 20+ blended poses, held props, outfits) | 28 | Done | Procedural original art; pose viewer screenshots |
+| 2.2 | Tap-to-walk with A* pathfinding; avatar walks to the real furniture/venue anchor and animates the activity | 14, 28 | Done | `tests/unit/nav.test.ts`, layout reachability tests |
+| 2.3 | Tappable furniture, NPCs and venue hotspots with an action card (cost, effects, blockers) | 6, 12, 32 | Done | Accessible list in "Here" sheet unchanged |
+| 2.4 | Feedback: floating rewards, level-up/promotion banners, particles, synthesised sound with mute | 28 | Done | Presentation only; never changes state |
+| 2.5 | Lighting: smooth day/night by London time, sky dome, soft shadows, readable night interiors | 28 | Done | |
+| 2.6 | Data-driven venue kit; 15 venues with layouts, NPCs, background crowds | 29, 30 | Done | 15 of 35 venues (see below) |
+| 2.7 | City map in 3D (Thames, districts, landmarks, pins, routes, filters); distance travel; taxi; Tube carriage scene | 14, 29 | Done | `tests/integration/city.test.ts` |
+| 2.8 | Opening hours and activity time windows | 30 | Done | Enforced on the server |
+| 2.9 | Minigames: pub quiz and rhythm (open mic, busking, dance battle) with server scoring and capped rewards | 10, 22, 30 | Done | Rhythm taps are client-submitted, so rewards are bounded and daily-limited |
+| 2.10 | Branching stories as authored graphs (5 stories), story map view, daily city treasure | 21 | Done | Graph validity + 11-way treasure race tests |
+| 2.11 | Daily check-in streak, wishes, perk shop, moodlets, NPC friendships, ambition milestones | 7, 19, 20 | Done | `tests/integration/goals.test.ts` |
+| 2.12 | Rent every Saturday 09:00 (DST-safe), starter support, arrears without eviction, savings with daily interest | 15, 31 | Done | `tests/integration/economy.test.ts` |
+| 2.13 | Seven home tiers: move (deposit + fee, storage for what doesn't fit) or buy; home district changes travel | 11 | Done | |
+| 2.14 | Courses: five courses, classes, notes, quizzes, certificates, career bonus | 9 | Done | 75 original questions |
+| 2.15 | Wardrobe (buy styles, wear in any colour) and salon hair changes | 34 | Done | |
+| 2.16 | Fictional health (cold from neglect; nurse, remedy or rest), Borough Health Centre, food delivery | 7.3, 13 | Done | |
+| 2.17 | Remaining venues (20 of 35), staff, utilities/outages, vehicles, skill rust, house parties | 9, 13, 14, 19, 30 | Not started | Rust is a source behaviour still to verify; vehicles slated for Milestone 5 |
+| 2.18 | Balance simulations (7/30/90-day) and tuning report | 31 | Not started | Values are design defaults |
+
+### Known limitations after this round
+
+- Art is original and procedural; it is far livelier than Milestone 1 but still not final, hand-made art.
+- 15 of the 35 venue definitions are playable; the rest (stadium, hotel, motors, airport, etc.) are not built yet.
+- Rhythm minigame inputs come from the client; rewards are capped and limited per day for that reason.
+- Sound is synthesised ambience and effects, not recorded audio; volume levels exist in code, the UI exposes mute.
+- Performance on real phones is unmeasured; scenes are light (one canvas, a few point lights) but untested on devices.
+- Other players: everything is single-player. NPCs are always labelled; no simulated user is presented as a player.
+
+## Milestones 3–5
+
+Unchanged from spec chapter 38. Milestone 3 (shared life: presence, chat, consent-based relationships, visits, player jobs, companies) needs a realtime server and two or more real accounts to validate; Milestone 4 adds friendly real-time games and civic systems; Milestone 5 the late-game economy. None of these are started, and none are faked.
 
 ## Feature-status matrix
 
 | Ch. | System | Milestone | Status |
 |---|---|---|---|
 | 1–4 | Direction, labels, core loop, sequence | — | Adopted as rules |
-| 5 | Character creation and identity | M1 | Done (ambition change cooldown UI pending) |
-| 6 | Main interface and navigation | M1 (shell), M2 (all apps) | In progress — shell done |
-| 7 | Needs, mood, health, clock | M1 (needs/clock), M2 (mood/health) | In progress — needs and clock done |
-| 8 | Activity engine | M1 | Done |
-| 9 | Skills and courses | M1 (skills), M2 (courses) | In progress — skills/XP done; rust and courses pending |
-| 10 | Careers, shifts, promotions | M2 | Not started |
-| 11 | Homes, tenancy, ownership | M1 (starter home), M2 (tiers), M3 (player tenancy) | In progress — starter homes done |
-| 12 | Furniture and placement | M1 | Done (design finishes pending) |
-| 13 | Utilities, food, staff | M1 (food), M2 (utilities/staff) | In progress — food done |
-| 14 | Travel, vehicles, streets | M1 (walk/bus/street), M2 (all modes, vehicles) | In progress — walk/bus done |
-| 15 | Wallet, bank, tax, bills | M1 (wallet/ledger), M2 (bank/bills/tax) | In progress — wallet and ledger done |
+| 5 | Character creation and identity | M1 | Done (ambition change now in Goals app) |
+| 6 | Main interface and navigation | M1–M2 | Done for built apps; later apps listed as "coming" with their milestone |
+| 7 | Needs, mood, health, clock | M1–M2 | Done: needs, clock, moodlets, fictional health |
+| 8 | Activity engine | M1 | Done (now with minigame activities and real-time settlement for cooldowns) |
+| 9 | Skills and courses | M1–M2 | Done except skill rust |
+| 10 | Careers, shifts, promotions | M2 | Done (5 careers; certificates and perks feed performance) |
+| 11 | Homes, tenancy, ownership | M2 | Done for personal homes (7 tiers, rent, move, buy); player tenancy is M3 |
+| 12 | Furniture and placement | M1 | Done (tap furniture to use, move or store) |
+| 13 | Utilities, food, staff | M2 | In progress — food and delivery done; utilities and staff not started |
+| 14 | Travel, vehicles, streets | M2 | In progress — walk, bus, Tube, taxi, 3D map done; vehicles not started |
+| 15 | Wallet, bank, tax, bills | M2 | Done for wallet, savings, rent bills, wage tax; bonds not started |
 | 16 | Businesses, companies, shops | M3 | Deferred |
 | 17 | Land, construction, fleets | M5 | Deferred |
 | 18 | Player work and escrow | M3 | Deferred |
-| 19 | Social, family, visits, parties | M1 (NPC greeting), M3 (players) | In progress — NPC chat done |
-| 20 | Reputation, missions, wishes, perks | M1 (missions), M2 (rest) | In progress — missions and reputation done |
-| 21 | Stories and daily treasure | M2 | Deferred |
-| 22 | Real-time table games (friendly only) | M4 | Deferred |
+| 19 | Social, family, visits, parties | M2 (NPCs), M3 (players) | In progress — NPC friendships done; players M3 |
+| 20 | Reputation, missions, wishes, perks | M2 | Done |
+| 21 | Stories and daily treasure | M2 | Done (5 stories; treasure claim order is atomic) |
+| 22 | Real-time table games (friendly only) | M4 | Deferred (single-player quiz and rhythm games exist) |
 | 23 | Casino and predictions | — | Out of scope (decision log 2026-10-10) |
-| 24 | Weather, condition, insurance | M1 (weather display), M5 (risk) | In progress — daily weather done |
+| 24 | Weather, condition, insurance | M1–M5 | In progress — weather affects mood, light, sound and walking (soaked); insurance M5 |
 | 25 | Government and elections | M4 | Deferred |
 | 26 | Game crime, custody, court | M4 | Deferred, crime mechanic still an open decision |
 | 27 | Feed, rankings, ads, notifications, moderation | M3–M4 | Deferred |
-| 28 | Visual identity | M1 onward | In progress — procedural kit; real art needed |
-| 29 | Boroughs | M1 (one slice), M2 (seven clusters) | In progress — Camden slice |
-| 30 | Venue catalogue (35; venue 36 out of scope) | M1 (2 venues), M2 (all) | In progress — 2 of 35 |
-| 31 | Balance sheet | M1 | In progress — M1 values in content data; simulations pending |
-| 32 | Screen contracts | M1 onward | In progress |
-| 33 | First twenty minutes | M1 | Done (career/course step labelled Milestone 2) |
-| 34 | Wardrobe, pets, prestige | M2 (wardrobe), M5 (pets/prestige) | Deferred |
-| 35 | Architecture | M1 | Done for M1 scope (realtime pending) |
-| 36 | Assets, performance, accessibility | M1 onward | In progress — keyboard/labels/reduced motion; perf unmeasured |
-| 37 | Acceptance suite | Every milestone | In progress — A, B, C, E, F, J (partial) covered |
+| 28 | Visual identity | M1–M2 | In progress — living procedural world; final art pending |
+| 29 | Boroughs | M2 | In progress — 6 districts on the map, 15 venues |
+| 30 | Venue catalogue (35; venue 36 out of scope) | M2 | In progress — 15 of 35 |
+| 31 | Balance sheet | M2 | In progress — values in content data; simulations pending |
+| 32 | Screen contracts | M1–M2 | In progress |
+| 33 | First twenty minutes | M1 | Done (e2e passes) |
+| 34 | Wardrobe, pets, prestige | M2/M5 | In progress — wardrobe and salon done; pets and prestige M5 |
+| 35 | Architecture | M1 | Done for single-player scope (realtime pending) |
+| 36 | Assets, performance, accessibility | M1 onward | In progress — keyboard/labels/reduced motion; accessible alternatives for 3D-only actions; perf unmeasured |
+| 37 | Acceptance suite | Every milestone | In progress — A–R integration groups, two e2e routes |
 
 ## Open decisions still with the owner
 

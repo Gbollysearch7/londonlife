@@ -9,7 +9,7 @@ import { londonDayKey, londonHour } from "@/sim/time";
 import { GameError, type Tx } from "./db";
 import { perkEffects } from "@/content/goals";
 import { grantMoodlet } from "./goals";
-import { addXp, emit, fmtMoney, loadCtx, moveMoney, requireCharacter, saveNeeds, settle, type CharRow } from "./game";
+import { addXp, emit, fmtMoney, grantOnce, loadCtx, moveMoney, requireCharacter, saveNeeds, settle, type CharRow } from "./game";
 
 async function levels(tx: Tx, charId: string) {
   const rows = (await tx.query("SELECT skill_id, xp FROM skills WHERE character_id = $1", [charId])).rows;
@@ -56,6 +56,7 @@ export async function chooseStory(tx: Tx, accountId: string, p: { choiceId: stri
   const node = storyNode(story, run.node_id)!;
   const ctx = await loadCtx(tx, c, now);
   if (ctx.journey) throw new GameError("travelling", "Wait until you arrive.");
+  if (ctx.running || ctx.shift) throw new GameError("busy", "Finish what you're doing first.");
   if (node.location && c.location !== node.location) throw new GameError("wrong_place", `This part of the story happens at ${venue(node.location)!.name}.`);
   const choice = node.choices.find((x) => x.id === p.choiceId);
   if (!choice) throw new GameError("bad_choice", "That isn't one of the options.");
@@ -69,7 +70,8 @@ export async function chooseStory(tx: Tx, accountId: string, p: { choiceId: stri
     c.needs = applyEffects(c.needs, choice.needs);
     await saveNeeds(tx, c, now);
   }
-  if (choice.xp) {
+  // Choice XP pays once per character per choice, so replaying a story can't farm skills.
+  if (choice.xp && (await grantOnce(tx, c.id, `story_xp:${story.id}:${node.id}:${choice.id}`, now))) {
     const x = await addXp(tx, c, choice.xp.skill, choice.xp.amount, now);
     parts.push(`${cap(x.skill)} +${x.gained} XP`);
   }

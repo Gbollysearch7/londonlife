@@ -259,3 +259,7 @@
 .quizField { border: 0; padding: 0; margin: 4px 0; display: grid; gap: 4px; }
 .quizField legend { font-weight: 600; margin-bottom: 4px; font-size: 14px; }
 .quizOpt { display: flex; gap: 8px; align-items: center; font-size: 14px; padding: 6px 8px; border-radius: 8px; background: var(--ivory); cursor: pointer; }
+
+@media (max-width: 760px) {
+  .sheet.half { height: 50dvh; }
+}

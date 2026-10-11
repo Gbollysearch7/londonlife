@@ -28,6 +28,12 @@ export async function setCondition(tx: Tx, c: CharRow, condition: ConditionId | 
   c.condition_since = condition ? now : null;
 }
 
+/** When the current condition clears on its own, or null. */
+export function conditionClearsAt(c: CharRow) {
+  const def = c.condition ? CONDITIONS[c.condition as ConditionId] : null;
+  return def && c.condition_since ? new Date(c.condition_since.getTime() + durationMs(def.naturalMinutes)) : null;
+}
+
 /** Energy decay multiplier from a current condition. */
 export const conditionDecay = (c: CharRow) => (c.condition ? CONDITIONS[c.condition as ConditionId]?.energyDecay ?? 1 : 1);
 

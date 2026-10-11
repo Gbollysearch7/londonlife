@@ -59,10 +59,10 @@ function App() {
           <Skyline />
         </div>
         <div className={styles.bootCard}>
-          <span className="chip gold">Test build · Milestone 1</span>
+          <span className="chip gold">Test build · Milestone 2</span>
           <h1>London Life</h1>
           <p className="muted">
-            Start with a small room and six needs. Work, cook, take the bus, furnish your place and make London yours.
+            Start with a small room and six needs. Walk the city, cook, work, perform, chase stories and treasure, and make London yours.
           </p>
           <ul className={styles.notes}>
             <li>Timers run 20× faster so you can test quickly. A 20-minute sleep takes one minute.</li>

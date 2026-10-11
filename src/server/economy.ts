@@ -154,6 +154,12 @@ async function hasArrears(tx: Tx, charId: string) {
   return (await tx.query("SELECT 1 FROM bills WHERE character_id = $1 AND status = 'unpaid' LIMIT 1", [charId])).rowCount! > 0;
 }
 
+/** Selling an owned home returns 90% of its price (fictional agent and legal fees). */
+export const HOME_SALE_FRACTION = 0.9;
+export function homeSalePence(tierId: string) {
+  return Math.round((HOME_TIERS.find((t) => t.id === tierId)?.pricePence ?? 0) * HOME_SALE_FRACTION);
+}
+
 export function moveInCost(tierId: string) {
   const t = HOME_TIERS.find((x) => x.id === tierId)!;
   return { deposit: t.rentPence * MOVE_IN.depositWeeks, fee: t.rentPence * MOVE_IN.feeWeeks };
@@ -182,20 +188,22 @@ export async function moveHome(tx: Tx, accountId: string, p: { tierId: string },
   const home = ctx.home.home;
   const cost = moveInCost(tier.id);
   const refund = Number(home.deposit_pence);
-  if (c.cash_pence + refund < cost.deposit + cost.fee) throw new GameError("insufficient_funds", `Moving in needs ${fmtMoney(cost.deposit + cost.fee)} (deposit ${fmtMoney(cost.deposit)} + fee ${fmtMoney(cost.fee)}).`);
+  // Moving out of a home you own sells it (less agent fees); ownership is never thrown away for nothing.
+  const sale = home.owned ? homeSalePence(ctx.home.tier.id) : 0;
+  if (c.cash_pence + refund + sale < cost.deposit + cost.fee) throw new GameError("insufficient_funds", `Moving in needs ${fmtMoney(cost.deposit + cost.fee)} (deposit ${fmtMoney(cost.deposit)} + fee ${fmtMoney(cost.fee)}).`);
   if (refund) await moveMoney(tx, c, refund, "home", "Deposit returned from your old home");
+  if (sale) await moveMoney(tx, c, sale, "home", `Sold your ${ctx.home.tier.name.toLowerCase()}`);
   await moveMoney(tx, c, -cost.deposit, "home", `Deposit: ${tier.name} (refundable when you move out)`);
   await moveMoney(tx, c, -cost.fee, "home", `Move-in fee: ${tier.name}`);
   const { stored } = refitFurniture(ctx.home.placed, tier.gridW, tier.gridD);
   for (const s of stored) await tx.query("UPDATE furniture SET home_id = NULL, x = NULL, y = NULL WHERE id = $1", [s.id]);
-  // An owned home is kept as an asset in a later milestone; for now moving out of it simply ends ownership is not allowed.
   await tx.query(
     "UPDATE homes SET tier_id = $2, district = $3, owned = false, rent_pence = $4, deposit_pence = $5, rent_due_at = $6, rent_free_until = NULL WHERE id = $1",
     [home.id, tier.id, tier.district, tier.rentPence, cost.deposit, nextLondonWeekly(now, RENT_DAY.isoWeekday, RENT_DAY.hour)],
   );
   await emit(tx, c.id, "moved_home", { tier: tier.id }, now);
   const names = stored.map((s) => furnitureDef(s.defId)?.name).filter(Boolean);
-  return { message: `Welcome to your ${tier.name.toLowerCase()} in ${tier.district}!${names.length ? ` ${names.length} item${names.length > 1 ? "s" : ""} didn't fit and went to storage.` : ""}` };
+  return { message: `${sale ? `Sold your old home for ${fmtMoney(sale)}. ` : ""}Welcome to your ${tier.name.toLowerCase()} in ${tier.district}!${names.length ? ` ${names.length} item${names.length > 1 ? "s" : ""} didn't fit and went to storage.` : ""}` };
 }
 
 export async function buyHome(tx: Tx, accountId: string, _p: unknown, now: Date) {
@@ -255,6 +263,7 @@ export async function economyView(tx: Tx, c: CharRow, now: Date) {
       owned: !!home.owned,
       rentPence: home.owned ? 0 : Number(home.rent_pence || tier.rentPence),
       depositPence: Number(home.deposit_pence),
+      salePence: home.owned ? homeSalePence(tier.id) : 0,
       nextRentAt: home.rent_due_at ? new Date(home.rent_due_at).toISOString() : null,
       rentFreeUntil: home.rent_free_until && new Date(home.rent_free_until) > now ? new Date(home.rent_free_until).toISOString() : null,
       tiers: HOME_TIERS.map((t) => {

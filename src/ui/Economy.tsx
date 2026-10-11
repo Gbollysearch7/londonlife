@@ -172,7 +172,7 @@ export function HomesApp({ s }: { s: State }) {
           .filter((t) => !t.current)
           .map((t) => {
             const total = t.deposit + t.fee;
-            const afford = s.wallet.cashPence + h.depositPence >= total;
+            const afford = s.wallet.cashPence + h.depositPence + h.salePence >= total;
             return (
               <li key={t.id} className={styles.workCard}>
                 <div className={styles.workRow}>
@@ -188,6 +188,7 @@ export function HomesApp({ s }: { s: State }) {
                   <div className={styles.confirm}>
                     <span>
                       Pay {money(t.deposit)} deposit + {money(t.fee)} fee{h.depositPence ? `; ${money(h.depositPence)} deposit returned` : ""}.
+                      {h.owned ? ` Moving sells the home you own for ${money(h.salePence)} (90% of its price).` : ""}
                     </span>
                     <div>
                       <button className="btn small secondary" onClick={() => setConfirm(null)}>

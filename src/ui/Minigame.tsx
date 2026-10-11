@@ -51,8 +51,15 @@ function LeaveButton({ onLeave }: { onLeave: () => void }) {
 
 function Quiz({ run, onDone }: { run: Run; onDone: (r: Result | null) => void }) {
   const runCmd = useGame((x) => x.run);
-  const qs = run.questions!;
+  const qs = run.questions ?? [];
   const [idx, setIdx] = useState(-1);
+  const [failed, setFailed] = useState(false);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  // Questions arrive from the server only once the round has begun.
+  useEffect(() => {
+    if (run.questions && idx < 0 && run.begunAt) setIdx(0);
+  }, [run.questions, run.begunAt, idx]);
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [picked, setPicked] = useState<number | null>(null);
   const [left, setLeft] = useState(run.secondsPerQuestion);
@@ -61,8 +68,13 @@ function Quiz({ run, onDone }: { run: Run; onDone: (r: Result | null) => void })
   const submit = async (all: (number | null)[]) => {
     if (submitting.current) return;
     submitting.current = true;
+    setFailed(false);
     const r = await runCmd("SubmitMinigame", { runId: run.id, answers: all }, "quiz");
-    onDone(r && r.result ? ({ ...(r.result as QuizResult), questions: qs } as Result) : null);
+    if (r && r.result) onDone({ ...(r.result as QuizResult), questions: qs } as Result);
+    else {
+      submitting.current = false;
+      setFailed(true);
+    }
   };
 
   const choose = (choice: number | null) => {
@@ -70,13 +82,13 @@ function Quiz({ run, onDone }: { run: Run; onDone: (r: Result | null) => void })
     setPicked(choice ?? -1);
     sfx(choice === null ? "miss" : "click");
     const next = [...answers, choice];
-    setTimeout(() => {
+    timers.current.push(setTimeout(() => {
       setAnswers(next);
       setPicked(null);
       setLeft(run.secondsPerQuestion);
       if (next.length >= qs.length) void submit(next);
       else setIdx(next.length);
-    }, 450);
+    }, 450));
   };
 
   useEffect(() => {
@@ -110,7 +122,7 @@ function Quiz({ run, onDone }: { run: Run; onDone: (r: Result | null) => void })
           autoFocus
           onClick={() => {
             sfx("start");
-            setIdx(0);
+            void runCmd("BeginMinigame", { runId: run.id }, "begin");
           }}
         >
           Start the quiz
@@ -120,7 +132,16 @@ function Quiz({ run, onDone }: { run: Run; onDone: (r: Result | null) => void })
   if (answers.length >= qs.length)
     return (
       <div className={styles.intro}>
-        <p className="muted">Sam is marking your answers…</p>
+        {failed ? (
+          <>
+            <p className="muted">Your answers didn't go through.</p>
+            <button className="btn" onClick={() => void submit(answers)}>
+              Try again
+            </button>
+          </>
+        ) : (
+          <p className="muted">Sam is marking your answers…</p>
+        )}
       </div>
     );
   const q = qs[idx];
@@ -159,8 +180,8 @@ const APPROACH = 1600;
 
 function Rhythm({ run, onDone }: { run: Run; onDone: (r: Result | null) => void }) {
   const runCmd = useGame((x) => x.run);
-  const notes = run.notes!;
-  const [phase, setPhase] = useState<"intro" | "count" | "play" | "submit">("intro");
+  const notes = run.notes ?? [];
+  const [phase, setPhase] = useState<"intro" | "count" | "play" | "submit" | "retry">("intro");
   const [count, setCount] = useState(3);
   const [combo, setCombo] = useState(0);
   const [judge, setJudge] = useState<{ text: string; n: number } | null>(null);
@@ -171,7 +192,14 @@ function Rhythm({ run, onDone }: { run: Run; onDone: (r: Result | null) => void 
   const laneEls = useRef<(HTMLButtonElement | null)[]>([]);
   const notesBox = useRef<HTMLDivElement>(null);
   const stopSong = useRef<() => void>(() => {});
-  const end = notes[notes.length - 1].t + 1200;
+  const end = notes.length ? notes[notes.length - 1].t + 1200 : 0;
+  // The beat map arrives once the round has begun; then the countdown and guide melody start together.
+  useEffect(() => {
+    if (phase === "intro" && run.begunAt && notes.length) {
+      stopSong.current = scheduleSong(notes, run.bpm, 2100);
+      setPhase("count");
+    }
+  }, [run.begunAt, notes.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const tap = (lane: number) => {
     if (phase !== "play") return;
@@ -262,7 +290,8 @@ function Rhythm({ run, onDone }: { run: Run; onDone: (r: Result | null) => void 
     stopSong.current();
     void (async () => {
       const r = await runCmd("SubmitMinigame", { runId: run.id, taps: taps.current }, "rhythm");
-      onDone(r ? ((r.result as Result) ?? null) : null);
+      if (r && r.result) onDone(r.result as Result);
+      else setPhase("retry");
     })();
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -279,10 +308,7 @@ function Rhythm({ run, onDone }: { run: Run; onDone: (r: Result | null) => void 
         <button
           className="btn"
           autoFocus
-          onClick={() => {
-            stopSong.current = scheduleSong(notes, run.bpm, 2100);
-            setPhase("count");
-          }}
+          onClick={() => void runCmd("BeginMinigame", { runId: run.id }, "begin")}
         >
           I'm ready
         </button>
@@ -324,6 +350,13 @@ function Rhythm({ run, onDone }: { run: Run; onDone: (r: Result | null) => void 
           </div>
         )}
         {phase === "submit" && <div className={styles.count}>…</div>}
+        {phase === "retry" && (
+          <div className={styles.count} style={{ pointerEvents: "auto" }}>
+            <button className="btn" onClick={() => setPhase("submit")}>
+              Send my performance again
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -72,3 +72,23 @@ describe("R · food delivery", () => {
     expect(await ledgerMatches(acc)).toBe(true);
   });
 });
+
+describe("Q2 · cold timing", () => {
+  it("the cold's faster energy drain stops when the cold clears", async () => {
+    const a = await makeAccount();
+    const b = await makeAccount();
+    await makeCharacter(a, T0);
+    await makeCharacter(b, T0);
+    const t = days(2);
+    for (const acc of [a, b]) {
+      await state(acc, t);
+      await pool().query("UPDATE characters SET energy = 100, hunger = 100, needs_settled_at = $2 WHERE account_id = $1", [acc, t]);
+    }
+    await pool().query("UPDATE characters SET condition = 'run_down', condition_since = $2 WHERE account_id = $1", [a, new Date(t.getTime() - 23 * 3_600_000)]);
+    // Two hours later: the cold cleared after one hour, so only one hour of extra drain applies.
+    const later = new Date(t.getTime() + 2 * 3_600_000);
+    const ea = (await state(a, later)).needs.energy;
+    const eb = (await state(b, later)).needs.energy;
+    expect(eb - ea).toBeCloseTo(4 * 0.3, 1);
+  });
+});

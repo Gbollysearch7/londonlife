@@ -31,6 +31,11 @@ describe("H · minigames", () => {
     await cmd(acc, "StartActivity", { activityId: "pub_quiz" }, at);
     let s = await state(acc, after(at, 1000));
     expect(s.minigame.kind).toBe("quiz");
+    // Nothing to study before you begin.
+    expect(s.minigame.questions).toBeNull();
+    await expect(cmd(acc, "SubmitMinigame", { runId: s.minigame.id, answers: [0, 0, 0, 0, 0] }, after(at, 1500))).rejects.toThrow(/Start the round/);
+    await cmd(acc, "BeginMinigame", { runId: s.minigame.id }, after(at, 2000));
+    s = await state(acc, after(at, 2000));
     expect(s.minigame.questions).toHaveLength(5);
     expect(JSON.stringify(s.minigame)).not.toMatch(/"answer"/);
     const run = s.minigame.id;
@@ -60,6 +65,7 @@ describe("H · minigames", () => {
     const at = await goTo(acc, "camden_backroom", T0);
     await cmd(acc, "StartActivity", { activityId: "open_mic" }, at);
     const s = await state(acc, after(at, 500));
+    await cmd(acc, "BeginMinigame", { runId: s.minigame.id }, at);
     const seed = (await pool().query("SELECT seed FROM minigame_runs WHERE id = $1", [s.minigame.id])).rows[0].seed;
     const notes = beatMap(seed, RHYTHM.open_mic);
     await expect(cmd(acc, "SubmitMinigame", { runId: s.minigame.id, taps: notes }, after(at, 1000))).rejects.toThrow(/isn't over/);
@@ -95,5 +101,40 @@ describe("H · minigames", () => {
     const run = (await state(acc, after(at, 500))).minigame.id;
     await cmd(acc, "CancelActivity", {}, after(at, 2000));
     await expect(cmd(acc, "SubmitMinigame", { runId: run, answers: [0] }, after(at, 3000))).rejects.toThrow(/Too late|ended/);
+  });
+});
+
+describe("H2 · minigame integrity", () => {
+  it("a cancelled quiz still uses today's go, so questions can't be re-rolled", async () => {
+    const acc = await makeAccount();
+    await makeCharacter(acc, T0);
+    const at = await goTo(acc, "last_stop_pub", T0);
+    await cmd(acc, "StartActivity", { activityId: "pub_quiz" }, at);
+    await cmd(acc, "CancelActivity", {}, after(at, 1000));
+    await expect(cmd(acc, "StartActivity", { activityId: "pub_quiz" }, after(at, 2000))).rejects.toThrow(/Limit/);
+  });
+
+  it("quiz answers must arrive while the clock is running", async () => {
+    const acc = await makeAccount();
+    await makeCharacter(acc, T0);
+    const at = await goTo(acc, "last_stop_pub", T0);
+    await cmd(acc, "StartActivity", { activityId: "pub_quiz" }, at);
+    const run = (await state(acc, after(at, 500))).minigame.id;
+    await cmd(acc, "BeginMinigame", { runId: run }, after(at, 1000));
+    await expect(cmd(acc, "SubmitMinigame", { runId: run, answers: [0, 0, 0, 0, 0] }, after(at, 1000 + 5 * 15_000 + 25_000))).rejects.toThrow(/Time's up/);
+  });
+
+  it("the late dance battle can only be won once per night, even across midnight", async () => {
+    const acc = await makeAccount();
+    await makeCharacter(acc, T0);
+    await pool().query("UPDATE skills SET xp = 300 WHERE skill_id = 'dance' AND character_id = (SELECT id FROM characters WHERE account_id = $1)", [acc]);
+    // 23:30 London.
+    const night = new Date("2026-10-10T22:30:00Z");
+    const at = await goTo(acc, "afterlight", night);
+    await cmd(acc, "StartActivity", { activityId: "dance_battle" }, at);
+    await cmd(acc, "CancelActivity", {}, after(at, 1000));
+    // 00:40, a new calendar day but the same night.
+    const late = new Date("2026-10-10T23:40:00Z");
+    await expect(cmd(acc, "StartActivity", { activityId: "dance_battle" }, late)).rejects.toThrow(/Limit/);
   });
 });

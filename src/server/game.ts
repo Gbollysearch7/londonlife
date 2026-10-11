@@ -16,7 +16,7 @@ import { storyView, treasureView } from "./stories";
 import { activeMoodlets, goalsView, grantMoodlet } from "./goals";
 import { economyView, settleEconomy } from "./economy";
 import { wardrobeView } from "./wardrobe";
-import { conditionDecay, healthView, setCondition, settleDeliveries, settleHealth } from "./health";
+import { conditionClearsAt, conditionDecay, healthView, setCondition, settleDeliveries, settleHealth } from "./health";
 import { classAttended, classBlocker, classesToday, courseRows, coursesView, type CourseRow } from "./courses";
 import { moodletForActivity, perkEffects } from "@/content/goals";
 
@@ -209,7 +209,13 @@ function activityMinutes(def: ActivityDef, home: HomeCtx) {
  */
 export async function settle(tx: Tx, c: CharRow, now: Date) {
   const perkDecay = { ...perkEffects(c.perks).decay };
-  if (c.condition) perkDecay.energy = (perkDecay.energy ?? 1) * conditionDecay(c);
+  // A cold's faster energy drain applies only until the moment it clears on its own.
+  const clearsAt = conditionClearsAt(c);
+  if (c.condition && clearsAt && clearsAt > c.needs_settled_at && clearsAt < now) {
+    const ill = settleNeeds({ needs: c.needs, settledAt: c.needs_settled_at, now: clearsAt, traits: c.traits, createdAt: c.created_at, perkDecay: { ...perkDecay, energy: (perkDecay.energy ?? 1) * conditionDecay(c) } });
+    c.needs = ill.needs;
+    c.needs_settled_at = clearsAt;
+  } else if (c.condition) perkDecay.energy = (perkDecay.energy ?? 1) * conditionDecay(c);
   const result = settleNeeds({ needs: c.needs, settledAt: c.needs_settled_at, now, traits: c.traits, createdAt: c.created_at, perkDecay });
   c.needs = result.needs;
   const notices: string[] = [];
@@ -368,10 +374,21 @@ export async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
   const home = await homeContext(tx, c);
   const inv = await inventoryOf(tx, c.id);
   const skillRows = await tx.query("SELECT skill_id, xp FROM skills WHERE character_id = $1", [c.id]);
-  const counts = await tx.query(
-    `SELECT def_id, count(*) FROM activities WHERE character_id = $1 AND period_key = $2 AND status IN ('running','completed') GROUP BY def_id`,
-    [c.id, day],
-  );
+  const recent = await tx.query(`SELECT def_id, status, period_key, started_at FROM activities WHERE character_id = $1 AND (period_key = $2 OR started_at > $3)`, [
+    c.id,
+    day,
+    new Date(now.getTime() - 20 * 3_600_000),
+  ]);
+  // Daily limits: cancelled minigame rounds still count (no re-rolling questions), and activities whose
+  // hours run past midnight count over one night rather than one calendar day.
+  const todayCounts: Record<string, number> = {};
+  for (const r of recent.rows) {
+    const def = activityDef(r.def_id);
+    if (!def) continue;
+    const counts = r.status !== "cancelled" || !!def.minigame;
+    const inPeriod = def.hours && def.hours[1] > 24 ? new Date(r.started_at).getTime() > now.getTime() - 20 * 3_600_000 : r.period_key === day;
+    if (counts && inPeriod) todayCounts[r.def_id] = (todayCounts[r.def_id] ?? 0) + 1;
+  }
   const last = await tx.query(
     `SELECT def_id, max(settled_at) AS at FROM activities WHERE character_id = $1 AND status = 'completed' GROUP BY def_id`,
     [c.id],
@@ -385,7 +402,7 @@ export async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
     home,
     inv,
     skills: Object.fromEntries(skillRows.rows.map((r) => [r.skill_id, levelForXp(Number(r.xp))])),
-    todayCounts: Object.fromEntries(counts.rows.map((r) => [r.def_id, Number(r.count)])),
+    todayCounts,
     lastDone: Object.fromEntries(last.rows.map((r) => [r.def_id, r.at])),
     onceDone: new Set(once.rows.map((r) => r.reward_key)),
     running: running.rows[0] ?? null,

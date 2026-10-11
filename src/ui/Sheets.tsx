@@ -214,7 +214,7 @@ export function MapSheet({ s }: { s: State }) {
     if (focus) document.getElementById(`place-${focus}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [focus]);
   return (
-    <Sheet title="London" onClose={() => setSheet(null)}>
+    <Sheet title="London" onClose={() => setSheet(null)} half>
       <p className="tiny" style={{ marginTop: 0 }}>
         Tap a pin on the map or pick a place below. Fares and times are fictional game values.
       </p>

@@ -22,6 +22,19 @@ async function skillLevel(tx: Tx, charId: string, skill: string) {
   return levelForXp(Number(r.rows[0]?.xp ?? 0));
 }
 
+/** Slack added to server-side time limits for network delay. */
+export const SUBMIT_SLACK_MS = 20_000;
+
+/** Starts play: from now the questions (or notes) are shown and the clock runs. Idempotent. */
+export async function beginMinigame(tx: Tx, accountId: string, p: { runId: string }, now: Date) {
+  const c = await requireCharacter(tx, accountId);
+  await settle(tx, c, now);
+  const run = (await tx.query("SELECT * FROM minigame_runs WHERE id = $1 AND character_id = $2 FOR UPDATE", [p.runId, c.id])).rows[0];
+  if (!run || run.status !== "open" || new Date(run.expires_at) <= now) throw new GameError("expired", "That round has ended.");
+  if (!run.begun_at) await tx.query("UPDATE minigame_runs SET begun_at = $2 WHERE id = $1", [run.id, now]);
+  return { message: "Go!" };
+}
+
 export async function submitMinigame(tx: Tx, accountId: string, p: { runId: string; answers?: unknown[]; taps?: unknown[] }, now: Date) {
   const c = await requireCharacter(tx, accountId);
   await settle(tx, c, now);
@@ -29,6 +42,8 @@ export async function submitMinigame(tx: Tx, accountId: string, p: { runId: stri
   if (!run) throw new GameError("no_run", "That game isn't yours or doesn't exist.");
   if (run.status === "submitted") throw new GameError("already_submitted", "You've already finished that one.");
   if (run.status !== "open" || new Date(run.expires_at) <= now) throw new GameError("expired", "Too late — that round has ended.");
+  if (!run.begun_at) throw new GameError("not_begun", "Start the round first.");
+  const begun = new Date(run.begun_at).getTime();
   const act = (await tx.query("SELECT * FROM activities WHERE id = $1 AND status = 'running'", [run.activity_id])).rows[0];
   if (!act) throw new GameError("expired", "That round has already ended.");
   const def = activityDef(run.def_id)!;
@@ -37,6 +52,7 @@ export async function submitMinigame(tx: Tx, accountId: string, p: { runId: stri
   let result: Record<string, unknown>;
   if (run.kind === "quiz") {
     const qs = pickQuestions(run.seed);
+    if (now.getTime() > begun + qs.length * QUIZ_SECONDS_PER_QUESTION * 1000 + SUBMIT_SLACK_MS) throw new GameError("too_late", "Time's up — answers have to come in while the clock is running.");
     const answers = Array.isArray(p.answers) ? p.answers.slice(0, qs.length) : [];
     const correct = quizScore(qs, answers);
     const prize = quizPrize(correct);
@@ -46,7 +62,9 @@ export async function submitMinigame(tx: Tx, accountId: string, p: { runId: stri
     const spec = RHYTHM[run.def_id];
     const notes = beatMap(run.seed, spec);
     // A song can't be finished faster than it plays.
-    if (now.getTime() - new Date(run.started_at).getTime() < songLengthMs(notes) * 0.8) throw new GameError("too_soon", "The song isn't over yet.");
+    const song = songLengthMs(notes);
+    if (now.getTime() - begun < song * 0.8) throw new GameError("too_soon", "The song isn't over yet.");
+    if (now.getTime() > begun + song + 3000 + SUBMIT_SLACK_MS) throw new GameError("too_late", "The song finished a while ago.");
     const { hits, accuracy } = rhythmAccuracy(notes, p.taps);
     const level = await skillLevel(tx, c.id, spec.skill);
     const score = performanceScore(accuracy, level);
@@ -64,12 +82,14 @@ export async function minigameView(tx: Tx, c: CharRow, now: Date) {
   const run = (await tx.query("SELECT * FROM minigame_runs WHERE character_id = $1 AND status = 'open' AND expires_at > $2 ORDER BY started_at DESC LIMIT 1", [c.id, now])).rows[0];
   if (!run) return null;
   const def = activityDef(run.def_id)!;
-  const base = { id: String(run.id), kind: run.kind as "quiz" | "rhythm", defId: def.id, title: def.label, startedAt: new Date(run.started_at).toISOString(), expiresAt: new Date(run.expires_at).toISOString() };
+  const begun = run.begun_at ? new Date(run.begun_at).toISOString() : null;
+  const base = { id: String(run.id), kind: run.kind as "quiz" | "rhythm", defId: def.id, title: def.label, startedAt: new Date(run.started_at).toISOString(), expiresAt: new Date(run.expires_at).toISOString(), begunAt: begun };
+  // Nothing to study before play begins: questions and notes are revealed only once the clock starts.
   if (run.kind === "quiz") {
-    return { ...base, secondsPerQuestion: QUIZ_SECONDS_PER_QUESTION, questions: pickQuestions(run.seed).map((q) => ({ id: q.id, prompt: q.prompt, options: q.options })), notes: null, lead: 0, bpm: 0 };
+    return { ...base, secondsPerQuestion: QUIZ_SECONDS_PER_QUESTION, questions: begun ? pickQuestions(run.seed).map((q) => ({ id: q.id, prompt: q.prompt, options: q.options })) : null, notes: null, lead: 0, bpm: 0 };
   }
   const spec = RHYTHM[run.def_id];
-  return { ...base, secondsPerQuestion: 0, questions: null, notes: beatMap(run.seed, spec), lead: RHYTHM_LEAD_MS, bpm: spec.bpm };
+  return { ...base, secondsPerQuestion: 0, questions: null, notes: begun ? beatMap(run.seed, spec) : null, lead: RHYTHM_LEAD_MS, bpm: spec.bpm };
 }
 
 export const QUIZ_SIZE = QUIZ.length;

@@ -29,6 +29,7 @@ const HANDLERS: Record<string, Handler> = {
   SetWorkStyle: careers.setWorkStyle as Handler,
   SubmitWorkTask: careers.submitWorkTask as Handler,
   LeaveShift: careers.leaveShift as Handler,
+  BeginMinigame: minigames.beginMinigame as Handler,
   SubmitMinigame: minigames.submitMinigame as Handler,
   StartStory: stories.startStory as Handler,
   ChooseStory: stories.chooseStory as Handler,
