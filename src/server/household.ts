@@ -1,6 +1,6 @@
 import { HOME_TIERS } from "@/content/character";
 import { FRIEND_TIERS, friendTier } from "@/content/goals";
-import { CHEF_MEALS, CHEF_MEALS_PER_DAY, CLEANER_MOOD, OUTAGE_KINDS, PARTY, PARTY_IDS, STAFF, staffDef, utilitiesFor } from "@/content/household";
+import { CHEF_MEALS, CHEF_MEALS_PER_DAY, CLEANER_MOOD, OUTAGE, OUTAGE_KINDS, PARTY, PARTY_IDS, STAFF, staffDef, utilitiesFor } from "@/content/household";
 import type { ActivityDef } from "@/content/types";
 import { VENUES, hourLabel } from "@/content/world";
 import { applyEffects } from "@/sim/needs";
@@ -180,9 +180,12 @@ export async function collectChefMeal(tx: Tx, accountId: string, _p: unknown, no
 
 // ───────────────────────────── activity hooks ─────────────────────────────
 
+/** No outages during a new arrival's first fortnight. */
+export const inOutageGrace = (c: { created_at: Date }, now: Date) => now.getTime() - new Date(c.created_at).getTime() < OUTAGE.graceDays * 86_400_000;
+
 /** Household rules for "can this start?": outages and one party a night. Called from activityBlocker. */
 export function householdBlocker(def: ActivityDef, ctx: Ctx): string | null {
-  if (def.location === "home" && def.requires) {
+  if (def.location === "home" && def.requires && !inOutageGrace(ctx.c, ctx.now)) {
     const o = outageBlocks(ctx.c.id, ctx.now, def.requires);
     if (o) {
       const k = OUTAGE_KINDS[o.kind];
@@ -237,7 +240,7 @@ export async function householdView(tx: Tx, c: CharRow, ctx: Ctx, now: Date) {
   const nextDue = hh ? new Date(hh.bills_due_at) : nextLondonWeekly(now, RENT_DAY.isoWeekday, RENT_DAY.hour);
   const staffRows = await activeStaff(tx, c.id);
   const served = Number((await tx.query("SELECT served FROM chef_meals WHERE character_id = $1 AND day_key = $2", [c.id, londonDayKey(now)])).rows[0]?.served ?? 0);
-  const o = weekOutage(c.id, now);
+  const o = inOutageGrace(c, now) ? null : weekOutage(c.id, now);
   const wd = londonWeekday(now);
   const h = londonHour(now);
   const outageState = o ? (wd < o.weekday || (wd === o.weekday && h < o.startHour) ? "upcoming" : wd === o.weekday && h < o.endHour ? "active" : "over") : null;

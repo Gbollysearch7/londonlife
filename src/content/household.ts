@@ -25,7 +25,9 @@ export const utilitiesFor = (tierId: string) => UTILITIES_PENCE[tierId] ?? 1000;
  */
 export const OUTAGE = {
   /** Chance that a given week has an outage. */
-  weeklyChance: 0.6,
+  weeklyChance: 0.35,
+  /** New arrivals get a quiet first fortnight (matches the starting rent support). */
+  graceDays: 14,
   /** Outage length in London hours. */
   hours: 3,
   /** Earliest and latest start hour (London time); outages end by 22:00. */

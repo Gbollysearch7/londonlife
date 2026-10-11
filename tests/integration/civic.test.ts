@@ -24,6 +24,8 @@ async function people(n: number, born = BORN) {
   for (let i = 0; i < n; i++) {
     const a = await makeAccount();
     await makeCharacter(a, born);
+    // Ballots are cast in person at City Hall now that the venue exists.
+    if (venue("city_hall")) await pool().query("UPDATE characters SET location = 'city_hall' WHERE account_id = $1", [a]);
     out.push(a);
   }
   return out;

@@ -8,12 +8,14 @@ vi.mock("@/server/db", () => import("@/demo/db"));
 describe("games and civic commands on PGlite", () => {
   let commands: typeof import("@/server/commands");
   let acc: string;
+  let pg: PGlite;
   const T0 = new Date("2026-10-10T13:00:00Z");
   beforeAll(async () => {
     const { setDb } = await import("@/demo/db");
     const db = new PGlite();
     for (const f of fs.readdirSync("db/migrations").sort()) await db.exec(fs.readFileSync(`db/migrations/${f}`, "utf8").replace(/CREATE EXTENSION[^;]*;/, ""));
     setDb(db);
+    pg = db;
     acc = (await db.query<{ id: string }>("INSERT INTO accounts (email, password_hash, adult_confirmed_at) VALUES ('g','x',now()) RETURNING id")).rows[0].id;
     commands = await import("@/server/commands");
     const payload = { name: "Tess", appearance: { body: 0, skin: 1, hairStyle: 0, hairColour: 0, top: 0, bottom: 0, shoes: 0 }, traits: ["creative", "sociable"], ambition: "four_friends" };
@@ -28,6 +30,8 @@ describe("games and civic commands on PGlite", () => {
     t = await commands.loadTableFor(acc, id, T0);
     expect(t.moveCount).toBe(2);
     expect(t.players[1].npc).toBe(true);
+    // Ballots are cast in person at City Hall.
+    await pg.query("UPDATE characters SET location = 'city_hall'");
     await commands.runCommand(acc, "key-stand-001", "StandForElection", { policyId: "half_price_buses" }, T0);
     const s = (await commands.loadStateFor(acc, T0)) as any;
     await commands.runCommand(acc, "key-vote-0001", "CastVote", { candidateId: s.civic.candidates[0].id }, T0);

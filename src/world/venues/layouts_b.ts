@@ -215,7 +215,7 @@ export const LAYOUTS_B: Record<string, VenueLayout> = {
       wc: { pos: [-5.4, -1.2], rotY: -90, label: "Toilets", icon: "▽" },
       exit: { pos: [-5.3, 3.2], rotY: -90, label: "Leave", icon: "⌖" },
     },
-    npcs: [{ id: "rosa", appearance: { body: 1, skin: 3, hairStyle: 2, hairColour: 4, top: 1, bottom: 3, shoes: 1 }, outfit: { top: 0, hat: 1 }, pos: [-0.6, -1.6], rotY: -100, pose: "work" }],
+    npcs: [{ id: "marley", appearance: { body: 1, skin: 3, hairStyle: 2, hairColour: 4, top: 1, bottom: 3, shoes: 1 }, outfit: { top: 0, hat: 1 }, pos: [-0.6, -1.6], rotY: -100, pose: "work" }],
     extras: [
       { seed: 241, pos: [2.9, -2.75], rotY: 180, pose: "work" },
       { seed: 242, pos: [1.2, 2.0], rotY: 140, pose: "phone" },

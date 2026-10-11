@@ -76,9 +76,9 @@ export const VENUES_B: VenueDef[] = [
     blurb: "A bike workshop under a railway arch: repair stands, a route board and a coffee hatch. Bike rental and ownership are coming later.",
     opening: "08:00–19:00",
     access: "Free entry",
-    npcs: [{ id: "rosa", name: "Rosa", role: "Bike mechanic (NPC)" }],
+    npcs: [{ id: "marley", name: "Marley", role: "Bike mechanic (NPC)" }],
     street: { x: 33 },
-    map: [5.6, 2.55],
+    map: [5.95, 2.0],
     hours: [8, 19],
     tags: ["fitness", "earn", "learn"],
   },
@@ -134,7 +134,7 @@ export const VENUES_B: VenueDef[] = [
     access: "Free · Public gallery coming later",
     npcs: [{ id: "bram", name: "Usher Bram", role: "Court usher (NPC)" }],
     street: { x: 28 },
-    map: [4.85, 3.45],
+    map: [4.95, 3.75],
     hours: [9, 17],
     tags: ["free", "learn", "quiet"],
   },
@@ -215,12 +215,12 @@ export const ACTIVITIES_B: ActivityDef[] = [
   toilet("members_green"),
 
   // ── Pedal & Patch ──
-  { id: "bike_repair_job", label: "Patch punctures for Rosa", description: "Practice job: fix inner tubes for £16.", location: "pedal_patch", minutes: 6, costPence: 0, payPence: 1600, needs: { energy: -4, hygiene: -3 }, xp: { skill: "enterprise", amount: 8 }, dailyLimit: 3, minEnergy: 15, cancelRule: PAID, event: "side_task_paid", anchor: "stand" },
+  { id: "bike_repair_job", label: "Patch punctures for Marley", description: "Practice job: fix inner tubes for £16.", location: "pedal_patch", minutes: 6, costPence: 0, payPence: 1600, needs: { energy: -4, hygiene: -3 }, xp: { skill: "enterprise", amount: 8 }, dailyLimit: 3, minEnergy: 15, cancelRule: PAID, event: "side_task_paid", anchor: "stand" },
   { id: "bike_workshop", label: "Bike maintenance workshop", description: "£5 class: brakes, gears and chains.", location: "pedal_patch", minutes: 10, costPence: 500, needs: { fun: 6, social: 4 }, xp: { skill: "enterprise", amount: 20 }, cancelRule: "The class fee isn't refunded.", event: "practised", eventData: { skill: "enterprise" }, anchor: "workshop" },
   { id: "social_ride", label: "Join the morning social ride", description: "Free group loop on a borrowed shop bike, 09:00–11:59. Bike ownership comes later.", location: "pedal_patch", minutes: 10, costPence: 0, needs: { fun: 14, social: 12, energy: -10, hygiene: -8 }, xp: { skill: "fitness", amount: 20 }, minEnergy: 20, dailyLimit: 1, hours: [9, 12], cancelRule: NO_REFUND, event: "practised", eventData: { skill: "fitness" }, anchor: "board" },
-  { id: "route_board", label: "Plan a route on the board", description: "Pins, string and Rosa's favourite canal paths.", location: "pedal_patch", minutes: 4, costPence: 0, needs: { fun: 8 }, cooldownMin: 30, cancelRule: NO_REFUND, event: "relaxed", anchor: "board" },
+  { id: "route_board", label: "Plan a route on the board", description: "Pins, string and Marley's favourite canal paths.", location: "pedal_patch", minutes: 4, costPence: 0, needs: { fun: 8 }, cooldownMin: 30, cancelRule: NO_REFUND, event: "relaxed", anchor: "board" },
   { id: "pedal_coffee", label: "Coffee from the hatch", description: "£3 flat white in a dented tin mug.", location: "pedal_patch", minutes: 2, costPence: 300, needs: { energy: 8, fun: 2, bladder: -6 }, cancelRule: NO_REFUND, event: "relaxed", anchor: "hatch" },
-  chat("rosa", "Rosa", "pedal_patch", "stand"),
+  chat("marley", "Marley", "pedal_patch", "stand"),
   toilet("pedal_patch"),
 
   // ── Borough Build Yard ──

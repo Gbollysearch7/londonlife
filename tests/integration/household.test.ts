@@ -89,7 +89,8 @@ describe("R · outages", () => {
     const id = await charId(acc);
     // Find this character's first hot-water outage (deterministic per week).
     let t: Date | null = null;
-    for (let h = 0; h < 24 * 7 * 30 && !t; h++) {
+    // Outages start after the newcomer's quiet first fortnight.
+    for (let h = 24 * 15; h < 24 * 7 * 40 && !t; h++) {
       const at = hours(T0, h);
       if (activeOutage(id, at)?.kind === "hot_water") t = at;
     }
