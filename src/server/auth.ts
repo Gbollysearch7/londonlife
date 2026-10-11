@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { GameError, pool } from "./db";
+import { verifyPassword as verifyStored } from "./passwords";
+import { LIMITS, bucketFor, isThrottled, recordAttempt } from "./recovery";
 
 const COOKIE = "ll_session";
 const SESSION_DAYS = 30;
@@ -9,12 +11,6 @@ function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16);
   const key = crypto.scryptSync(password, salt, 64);
   return `scrypt:${salt.toString("hex")}:${key.toString("hex")}`;
-}
-
-function verifyPassword(password: string, stored: string): boolean {
-  const [, saltHex, keyHex] = stored.split(":");
-  const key = crypto.scryptSync(password, Buffer.from(saltHex, "hex"), 64);
-  return crypto.timingSafeEqual(key, Buffer.from(keyHex, "hex"));
 }
 
 const tokenHash = (t: string) => crypto.createHash("sha256").update(t).digest("hex");
@@ -38,12 +34,23 @@ export async function signUp(emailRaw: string, password: string, adultConfirmed:
 }
 
 export async function signIn(emailRaw: string, password: string) {
+  return startSession(await verifyCredentials(emailRaw, password));
+}
+
+/** Checks an email and password (with the failed-attempt lockout) and returns the account id. */
+export async function verifyCredentials(emailRaw: string, password: string): Promise<string> {
   const email = emailRaw.trim().toLowerCase();
+  // Repeated wrong passwords for one email lock sign-in for that email for a while (counted whether or not it exists).
+  const bucket = await bucketFor("signin", email);
+  if (await isThrottled(pool(), bucket, LIMITS.signInFailures, new Date())) {
+    throw new GameError("rate_limited", "Too many failed sign-ins for this email. Wait 15 minutes, or reset your password.", 429);
+  }
   const res = await pool().query("SELECT id, password_hash FROM accounts WHERE email = $1", [email]);
-  if (!res.rowCount || !verifyPassword(password, res.rows[0].password_hash)) {
+  if (!res.rowCount || !(await verifyStored(password, res.rows[0].password_hash))) {
+    await recordAttempt(pool(), bucket, new Date());
     throw new GameError("bad_credentials", "Email or password is incorrect.", 401);
   }
-  return startSession(res.rows[0].id);
+  return res.rows[0].id as string;
 }
 
 async function startSession(accountId: string) {
@@ -67,6 +74,17 @@ export async function signOut() {
   const token = jar.get(COOKIE)?.value;
   if (token) await pool().query("DELETE FROM sessions WHERE token_hash = $1", [tokenHash(token)]);
   jar.delete(COOKIE);
+}
+
+/** Hash of this browser's session token, so a password change can keep the session that made it. */
+export async function currentSessionHash(): Promise<string | null> {
+  const token = (await cookies()).get(COOKIE)?.value;
+  return token ? tokenHash(token) : null;
+}
+
+/** Forgets this browser's session cookie (after its sessions were ended server-side). */
+export async function clearSessionCookie() {
+  (await cookies()).delete(COOKIE);
 }
 
 export async function currentAccountId(): Promise<string | null> {

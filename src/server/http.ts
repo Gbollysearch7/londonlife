@@ -11,3 +11,9 @@ export function errorResponse(err: unknown) {
     { status: 500 },
   );
 }
+
+/** Best-effort client network address for throttling (first proxy hop, else a shared fallback bucket). */
+export function clientAddress(req: Request) {
+  const fwd = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return (fwd || req.headers.get("x-real-ip") || "unknown").slice(0, 64);
+}
