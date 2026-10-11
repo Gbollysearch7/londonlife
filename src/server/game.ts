@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { ALL_MISSIONS_BONUS, CONTENT_VERSION, DAILY_MISSION_SWAPS, FIRST_CARE_STARS, RESALE_FRACTION, START_NEEDS, URGENT_THRESHOLD } from "@/content/balance";
+import { REPUTATION_TITLES } from "@/content/balance";
 import { AMBITIONS, APPEARANCE_OPTIONS, HOME_DISTRICT_POS, HOME_TIERS, ORIGINS, STARTER_RENT_FREE_WEEKS, TRAITS, type Appearance } from "@/content/character";
 import { FURNITURE, ITEMS, furnitureDef, itemDef } from "@/content/catalogue";
 import { ACTIVITIES, GROCERY_SHOPS, MISSIONS, TRAVEL_MODES, VENUES, activityDef, hourLabel, inWindow, isOpenAt, journeyQuote, missionDef, modesFor, venue, type TravelMode } from "@/content/world";
@@ -452,6 +453,9 @@ export function activityBlocker(def: ActivityDef, ctx: Ctx): string | null {
   if (household) return household;
   if (def.skillGate && (ctx.skills[def.skillGate.skill] ?? 0) < def.skillGate.level) {
     return `Needs ${cap(def.skillGate.skill)} level ${def.skillGate.level}.`;
+  }
+  if (def.repGate && reputation(c.reputation_xp).level < def.repGate) {
+    return `Members only: needs reputation level ${def.repGate} (${REPUTATION_TITLES[def.repGate - 1]?.title}).`;
   }
   for (const [item, qty] of Object.entries(def.consumes ?? {})) {
     if ((ctx.inv[item] ?? 0) < qty) return `Needs ${qty} × ${itemDef(item)?.name}.`;

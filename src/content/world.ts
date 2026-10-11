@@ -2,6 +2,7 @@ import { ITEMS, RECIPES } from "./catalogue";
 import { CITY_ACTIVITIES, CITY_VENUES } from "./city";
 import { COMPANY_ACTIVITIES } from "./market";
 import { ACTIVITIES_A, GROCERY_SHOPS_A, VENUES_A } from "./city_a";
+import { ACTIVITIES_B, VENUES_B } from "./city_b";
 import { COURSES } from "./courses";
 import { PARTY_ACTIVITIES } from "./household";
 import { PET_FOOD_ID, PRESTIGE_ACTIVITIES } from "./lateGame";
@@ -61,6 +62,7 @@ export const VENUES: VenueDef[] = [
   },
   ...CITY_VENUES,
   ...VENUES_A,
+  ...VENUES_B,
 ];
 
 export const venue = (id: string) => VENUES.find((v) => v.id === id);
@@ -227,6 +229,7 @@ export const ACTIVITIES: ActivityDef[] = [
   ...CITY_ACTIVITIES,
   ...PARTY_ACTIVITIES,
   ...ACTIVITIES_A,
+  ...ACTIVITIES_B,
   ...classActivities,
   ...COMPANY_ACTIVITIES,
   ...PRESTIGE_ACTIVITIES,

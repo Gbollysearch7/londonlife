@@ -20,6 +20,7 @@ const DISTRICTS: { name: string; at: [number, number]; spread: number; style: "t
   { name: "Soho", at: [2.1, 2.8], spread: 0.6, style: "soho", n: 14 },
   { name: "South Bank", at: [3.3, 4.6], spread: 0.9, style: "market", n: 14 },
   { name: "Brixton", at: [2.8, 8.0], spread: 1.0, style: "terrace", n: 22 },
+  { name: "Greenwich", at: [9.5, 6.0], spread: 1.0, style: "glass", n: 16 },
 ];
 
 // The Thames: a winding spine across the middle of the map.
