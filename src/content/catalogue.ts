@@ -25,6 +25,11 @@ export const FURNITURE: FurnitureDef[] = [
   { id: "rug", name: "Woven Rug", category: "Decor", pricePence: 3000, w: 2, d: 2, surface: "overlay", quality: 2, colours: ["#A45A45", "#234C42", "#C69C58"], enables: [], decor: 2, blurb: "Lies under furniture." },
   { id: "poster", name: "Gig Poster", category: "Decor", pricePence: 800, w: 1, d: 1, surface: "wall", quality: 1, colours: ["#BC3D3B", "#2F4A6B", "#C69C58"], enables: [], decor: 1, blurb: "Hangs on a wall." },
   { id: "wall_clock", name: "Wall Clock", category: "Decor", pricePence: 1500, w: 1, d: 1, surface: "wall", quality: 1, colours: ["#17232B", "#F2F0EA"], enables: [], decor: 1, blurb: "Hangs on a wall." },
+  // Original art sold only at the Riverside Arts House gallery (one of each per character). Fictional artists.
+  { id: "art_river_dusk", name: "River at Dusk", category: "Decor", pricePence: 6000, w: 1, d: 1, surface: "wall", quality: 2, colours: ["#B98B5E", "#17232B", "#C69C58"], enables: [], decor: 3, soldAt: "riverside_arts", artist: "Mara Ellison", blurb: "Original oil painting of the Thames going violet. Hangs on a wall." },
+  { id: "art_market_morning", name: "Market Morning", category: "Decor", pricePence: 4500, w: 1, d: 1, surface: "wall", quality: 2, colours: ["#F2F0EA", "#17232B"], enables: [], decor: 2, soldAt: "riverside_arts", artist: "Kofi Danquah", blurb: "Original gouache of crates, awnings and early light. Hangs on a wall." },
+  { id: "art_estate_bloom", name: "Estate in Bloom", category: "Decor", pricePence: 3500, w: 1, d: 1, surface: "wall", quality: 1, colours: ["#17232B", "#7A5134"], enables: [], decor: 2, soldAt: "riverside_arts", artist: "Priti Chauhan", blurb: "Hand-pulled linocut of tower blocks and window boxes. Hangs on a wall." },
+  { id: "art_clay_heron", name: "Clay Heron", category: "Decor", pricePence: 8500, w: 1, d: 1, surface: "floor", quality: 2, colours: ["#8C8C84", "#C06A4A", "#E9E2D3"], enables: [], decor: 3, soldAt: "riverside_arts", artist: "Agnes Mbeki", blurb: "Original glazed sculpture on a plinth. Stands on the floor." },
 ];
 
 export const ITEMS: ItemDef[] = [
