@@ -9,6 +9,7 @@ import * as courses from "./courses";
 import * as wardrobe from "./wardrobe";
 import * as health from "./health";
 import * as household from "./household";
+import * as social from "./social";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -54,6 +55,21 @@ const HANDLERS: Record<string, Handler> = {
   HireStaff: household.hireStaff as Handler,
   FireStaff: household.fireStaff as Handler,
   CollectChefMeal: household.collectChefMeal as Handler,
+  SendFriendRequest: social.sendFriendRequest as Handler,
+  RespondFriendRequest: social.respondFriendRequest as Handler,
+  WithdrawFriendRequest: social.withdrawFriendRequest as Handler,
+  Unfriend: social.unfriend as Handler,
+  BlockPlayer: social.blockPlayer as Handler,
+  UnblockPlayer: social.unblockPlayer as Handler,
+  SendMessage: social.sendMessage as Handler,
+  SendGift: social.sendGift as Handler,
+  RequestMoney: social.requestMoney as Handler,
+  RespondMoneyRequest: social.respondMoneyRequest as Handler,
+  CancelMoneyRequest: social.cancelMoneyRequest as Handler,
+  VisitHome: social.visitHome as Handler,
+  LeaveVisit: social.leaveVisit as Handler,
+  UpdateSocialSettings: social.updateSocialSettings as Handler,
+  ReportPlayer: social.reportPlayer as Handler,
 };
 
 export interface CommandResult {
@@ -89,4 +105,9 @@ export async function runCommand(accountId: string, key: string, type: string, p
 
 export function loadStateFor(accountId: string, now = new Date()) {
   return withTx((tx) => game.loadState(tx, accountId, now));
+}
+
+/** Read-only social queries for the phone (search, profiles, threads, rankings, feed, light poll). */
+export function socialQueryFor(accountId: string, op: string, params: Record<string, unknown>, now = new Date()) {
+  return withTx((tx) => social.socialQuery(tx, accountId, op, params, now));
 }

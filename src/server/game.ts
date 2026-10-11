@@ -21,6 +21,7 @@ import { classAttended, classBlocker, classesToday, courseRows, coursesView, typ
 import { moodletForActivity, perkEffects } from "@/content/goals";
 import { effectiveLevels, skillRust } from "./skills";
 import { householdBlocker, householdMood, householdView, partyCompleted, settleHousehold } from "./household";
+import { socialView } from "./social";
 
 // ───────────────────────────── rows ─────────────────────────────
 
@@ -951,6 +952,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     ...(await healthView(tx, c)),
     ...(await economyView(tx, c, now)),
     ...(await householdView(tx, c, ctx, now)),
+    ...(await socialView(tx, c, now)),
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };
   out.character.ambition.progress = goals.ambition.progress;

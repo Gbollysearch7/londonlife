@@ -21,6 +21,9 @@ const deg = (r: number) => (r * Math.PI) / 180;
 
 export { cellCentre };
 
+/** Shared with the read-only friend visit view. */
+export { Room };
+
 function Room({ gridW, gridD, light, weather }: { gridW: number; gridD: number; light: Lighting; weather: string }) {
   const wallH = 2.7;
   const wet = weather === "rain" || weather === "drizzle";

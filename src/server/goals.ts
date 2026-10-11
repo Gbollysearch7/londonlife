@@ -7,6 +7,7 @@ import { missionProgress, type EventRow } from "@/sim/setup";
 import { durationMs, londonDayKey } from "@/sim/time";
 import { GameError, type Tx } from "./db";
 import { fmtMoney, moveMoney, requireCharacter, settle, type CharRow } from "./game";
+import { playerFriendProgress } from "./social";
 
 function hash(s: string) {
   let h = 2166136261;
@@ -146,10 +147,12 @@ async function ambitionProgress(tx: Tx, c: CharRow, friends: Awaited<ReturnType<
       return { progress: steps / 14, note: `${steps} of 14 promotions in ${name}.` };
     }
     case "four_friends": {
-      const best = friends.map((f) => Math.min(1, f.points / 25)).slice(0, 4);
+      // Real players count alongside named locals; each friend gives up to a quarter.
+      const players = await playerFriendProgress(tx, c.id);
+      const best = [...friends.map((f) => Math.min(1, f.points / 25)), ...players.map((p) => p.progress)].sort((a, b) => b - a).slice(0, 4);
       const progress = best.reduce((a, b) => a + b, 0) / 4;
-      const count = friends.filter((f) => f.level >= 4).length;
-      return { progress, note: `${count} of 4 best friends. Spend time with locals to grow closer.` };
+      const count = friends.filter((f) => f.level >= 4).length + players.filter((p) => p.best).length;
+      return { progress, note: `${count} of 4 best friends. Spend time with locals and players to grow closer.` };
     }
     case "home_owner": {
       const home = (await tx.query("SELECT * FROM homes WHERE character_id = $1", [c.id])).rows[0];

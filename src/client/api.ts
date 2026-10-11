@@ -43,3 +43,10 @@ export async function sendCommand(type: string, payload: unknown = {}) {
   }
   throw lastErr;
 }
+
+/** Read-only social query (search, profile, thread, rankings, feed, pulse). */
+export async function fetchSocial<T = Record<string, unknown>>(op: string, params: Record<string, string | number | undefined> = {}): Promise<T> {
+  const q = new URLSearchParams({ op });
+  for (const [k, v] of Object.entries(params)) if (v !== undefined) q.set(k, String(v));
+  return parse(await fetch(`/api/social?${q}`, { cache: "no-store" }));
+}

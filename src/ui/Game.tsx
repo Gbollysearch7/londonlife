@@ -13,6 +13,7 @@ import { useScene } from "@/world/sceneStore";
 import { ActionsSheet, BuySheet, MapSheet, NeedsSheet, PlacementBar } from "./Sheets";
 import { PhoneSheet } from "./Phone";
 import { ShiftPanel } from "./ShiftPanel";
+import { VisitBar } from "./Social";
 import styles from "./ui.module.css";
 
 const World = dynamic(() => import("@/world/World"), { ssr: false });
@@ -113,6 +114,7 @@ export default function Game() {
       <div className={styles.leftCol}>
         <NextStep s={state} />
         <StoryPill s={state} />
+        <VisitBar s={state} />
         <Warnings s={state} />
       </div>
       <NeedsBar s={state} />

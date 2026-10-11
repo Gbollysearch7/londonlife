@@ -9,6 +9,7 @@ import { StoriesApp, TreasureApp } from "./Stories";
 import { GoalsApp, PeopleApp, PerksApp } from "./Goals";
 import { BankApp, CoursesApp, FoodApp, HomesApp, WardrobeApp } from "./Economy";
 import { StaffApp } from "./Household";
+import { FeedApp, MessagesApp, PeopleHub, PrivacySettings, RankingsApp } from "./Social";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
@@ -18,6 +19,9 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "jobs", name: "Jobs", icon: "◆" },
   { id: "perks", name: "Perks", icon: "✦" },
   { id: "people", name: "People", icon: "☺" },
+  { id: "messages", name: "Messages", icon: "✉" },
+  { id: "rankings", name: "Rankings", icon: "▲" },
+  { id: "feed", name: "City feed", icon: "≡" },
   { id: "missions", name: "Missions", icon: "✓" },
   { id: "bank", name: "Bank", icon: "£" },
   { id: "homes", name: "Homes", icon: "⌂" },
@@ -36,16 +40,12 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
 
 const LATER: { name: string; when: string }[] = [
   { name: "Vehicles", when: "Milestone 5" },
-  { name: "Messages", when: "Milestone 3" },
-  { name: "Contacts", when: "Milestone 3" },
   { name: "Invitations", when: "Milestone 3" },
   { name: "Family", when: "Milestone 3" },
-  { name: "Rankings", when: "Milestone 3" },
   { name: "Player work", when: "Milestone 3" },
   { name: "Company", when: "Milestone 3" },
   { name: "Shops", when: "Milestone 3" },
   { name: "Investments", when: "Milestone 3" },
-  { name: "City feed", when: "Milestone 3" },
   { name: "Games", when: "Milestone 4" },
   { name: "Government", when: "Milestone 4" },
   { name: "Police", when: "Milestone 4" },
@@ -73,6 +73,9 @@ const TITLES: Record<string, string> = {
   goals: "Goals",
   perks: "Perks",
   people: "People",
+  messages: "Messages",
+  rankings: "Rankings",
+  feed: "City feed",
   treasure: "Daily treasure",
   help: "Help",
   settings: "Settings",
@@ -98,7 +101,11 @@ export function PhoneSheet({ s }: { s: State }) {
           <ul className={styles.apps}>
             {LIVE.map((a) => {
               const badge =
-                a.id === "missions"
+                a.id === "messages"
+                  ? s.social.unreadTotal
+                  : a.id === "people"
+                  ? s.social.incoming.length + s.social.moneyRequests.incoming.length
+                  : a.id === "missions"
                   ? s.missions.items.filter((m) => m.claimable).length + (s.missions.bonus.claimable ? 1 : 0)
                   : a.id === "courses"
                     ? s.courses.list.filter((c) => c.quiz).length
@@ -144,7 +151,10 @@ export function PhoneSheet({ s }: { s: State }) {
       )}
       {current === "goals" && <GoalsApp s={s} />}
       {current === "perks" && <PerksApp s={s} />}
-      {current === "people" && <PeopleApp s={s} />}
+      {current === "people" && <PeopleHub s={s} npcs={<PeopleApp s={s} />} />}
+      {current === "messages" && <MessagesApp s={s} />}
+      {current === "rankings" && <RankingsApp s={s} />}
+      {current === "feed" && <FeedApp s={s} />}
       {current === "stories" && <StoriesApp s={s} />}
       {current === "treasure" && <TreasureApp s={s} />}
       {current === "jobs" && <Jobs s={s} />}
@@ -497,7 +507,7 @@ function Help() {
         <strong>Furniture</strong> unlocks actions at home. Buy, then place it: R rotates, arrows move, Enter places.
       </p>
       <p>
-        <strong>NPCs</strong> are named locals written for the game. Real players arrive in a later update and will always be clearly marked.
+        <strong>NPCs</strong> are named locals written for the game and always marked NPC. Real players appear in People → Players, and only friends can message, gift or visit you.
       </p>
     </div>
   );
@@ -510,6 +520,7 @@ function Settings() {
     return (
       <div className={styles.help}>
         <p className="tiny">This is the test build. Progress is saved in this browser only and timers run ×{process.env.LL_TEST_BUILD_TIME_SCALE}.</p>
+        <PrivacySettings />
         {ask ? (
           <div className={styles.quotes}>
             <button className="btn danger" disabled={busy} onClick={async () => (setBusy(true), await postJson("/api/auth/signout", {}))}>
@@ -528,7 +539,8 @@ function Settings() {
     );
   return (
     <div className={styles.help}>
-      <p className="tiny">Sound, notifications and privacy settings arrive with those features. Your progress saves automatically after every action.</p>
+      <PrivacySettings />
+      <p className="tiny">Sound and notification settings arrive with those features. Your progress saves automatically after every action.</p>
       <button
         className="btn secondary"
         disabled={busy}
