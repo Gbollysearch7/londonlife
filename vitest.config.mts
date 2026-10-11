@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
     fileParallelism: false,
-    env: { DATABASE_URL: "postgresql://london:london@localhost:5432/london_life_test" },
+    // TEST_DATABASE_URL lets parallel work use separate databases.
+    env: { DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgresql://london:london@localhost:5432/london_life_test" },
   },
 });
