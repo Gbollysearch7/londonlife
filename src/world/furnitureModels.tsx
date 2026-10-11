@@ -290,6 +290,22 @@ export function FurnitureModel({ defId, colour, w, d }: { defId: string; colour:
           </mesh>
         </group>
       );
+    case "party_speakers":
+      return (
+        <group>
+          {[-0.24, 0.24].map((x) => (
+            <group key={x} position={[x, 0, 0]}>
+              <Box p={[0, 0.45, 0]} s={[0.36, 0.9, 0.4]} c={colour} r={0.6} />
+              {[0.66, 0.3].map((y, i) => (
+                <mesh key={y} position={[0, y, 0.205]}>
+                  <circleGeometry args={[i ? 0.13 : 0.08, 24]} />
+                  <M c={colour === "#1A1A1A" ? "#46505b" : DARK} r={0.5} />
+                </mesh>
+              ))}
+            </group>
+          ))}
+        </group>
+      );
     default:
       return <Box p={[0, 0.4, 0]} s={[w * 0.9, 0.8, d * 0.9]} c={colour} />;
   }

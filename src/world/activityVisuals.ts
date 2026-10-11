@@ -38,6 +38,8 @@ const BY_ID: Record<string, Visual> = {
   coding_club: { pose: "type", particles: "code", seated: true },
   office_coffee: { pose: "snack", prop: "cup" },
   watch_band: { pose: "dance" },
+  house_party: { pose: "dance", particles: "notes" },
+  house_party_pantry: { pose: "dance", particles: "notes" },
   backroom_dance: { pose: "dance", particles: "notes" },
   open_mic: { pose: "perform", prop: "mic", particles: "notes" },
   backroom_setup: { pose: "work" },

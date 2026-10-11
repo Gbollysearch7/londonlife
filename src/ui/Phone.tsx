@@ -8,6 +8,7 @@ import { money } from "./format";
 import { StoriesApp, TreasureApp } from "./Stories";
 import { GoalsApp, PeopleApp, PerksApp } from "./Goals";
 import { BankApp, CoursesApp, FoodApp, HomesApp, WardrobeApp } from "./Economy";
+import { StaffApp } from "./Household";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
@@ -20,6 +21,7 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "missions", name: "Missions", icon: "✓" },
   { id: "bank", name: "Bank", icon: "£" },
   { id: "homes", name: "Homes", icon: "⌂" },
+  { id: "staff", name: "Staff", icon: "⚑" },
   { id: "courses", name: "Courses", icon: "✎" },
   { id: "wardrobe", name: "Wardrobe", icon: "♦" },
   { id: "food", name: "Food", icon: "◐" },
@@ -34,7 +36,6 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
 
 const LATER: { name: string; when: string }[] = [
   { name: "Vehicles", when: "Milestone 5" },
-  { name: "Staff", when: "Milestone 2 (next)" },
   { name: "Messages", when: "Milestone 3" },
   { name: "Contacts", when: "Milestone 3" },
   { name: "Invitations", when: "Milestone 3" },
@@ -65,6 +66,7 @@ const TITLES: Record<string, string> = {
   tour: "Your first twenty minutes",
   stories: "Stories",
   homes: "Homes",
+  staff: "Household",
   courses: "Courses",
   wardrobe: "Wardrobe",
   food: "Food delivery",
@@ -100,7 +102,9 @@ export function PhoneSheet({ s }: { s: State }) {
                   ? s.missions.items.filter((m) => m.claimable).length + (s.missions.bonus.claimable ? 1 : 0)
                   : a.id === "courses"
                     ? s.courses.list.filter((c) => c.quiz).length
-                    : a.id === "bank"
+                    : a.id === "staff"
+                      ? Number(s.household.outage?.state === "active")
+                      : a.id === "bank"
                       ? s.bank.unpaidCount
                       : a.id === "goals"
                     ? s.goals.wishes.filter((w) => w.claimable).length + s.goals.ambition.milestones.filter((m) => m.claimable).length
@@ -147,6 +151,7 @@ export function PhoneSheet({ s }: { s: State }) {
       {current === "missions" && <Missions s={s} />}
       {current === "bank" && <BankApp s={s} />}
       {current === "homes" && <HomesApp s={s} />}
+      {current === "staff" && <StaffApp s={s} />}
       {current === "courses" && <CoursesApp s={s} />}
       {current === "wardrobe" && <WardrobeApp s={s} />}
       {current === "food" && <FoodApp s={s} />}
@@ -349,12 +354,18 @@ function Skills({ s }: { s: State }) {
         <li key={k.id} className={styles.skill}>
           <div className={styles.actionTitle}>
             <strong>{k.name}</strong>
-            <span className="chip gold">Level {k.level}</span>
+            <span className="chip gold">Level {k.effective}</span>
+            {k.rust > 0 && <span className="chip">Rusty · best {k.best}</span>}
           </div>
           <div className={styles.bar}>
             <span style={{ width: `${k.progress * 100}%` }} />
           </div>
           <span className="tiny">{k.nextXp ? `${k.xp} / ${k.nextXp} XP to level ${k.level + 1}` : "Maxed"}</span>
+          {k.rust > 0 ? (
+            <span className="tiny">Unused for a while: counts as level {k.effective} until you practise again. Your XP is kept; any practice restores level {k.level}.</span>
+          ) : k.nextRustAt && k.level > 0 && new Date(k.nextRustAt).getTime() - new Date(s.now).getTime() < 10 * 86_400_000 ? (
+            <span className="tiny">Practise before {new Date(k.nextRustAt).toLocaleDateString("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short" })} to stop it getting rusty.</span>
+          ) : null}
         </li>
       ))}
     </ul>
