@@ -8,6 +8,7 @@ import { money } from "./format";
 import { StoriesApp, TreasureApp } from "./Stories";
 import { GoalsApp, PeopleApp, PerksApp } from "./Goals";
 import { BankApp, CoursesApp, FoodApp, HomesApp, WardrobeApp } from "./Economy";
+import { InsuranceApp, PetsApp, VehiclesApp, lateBadge } from "./LateGame";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
@@ -23,6 +24,9 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "courses", name: "Courses", icon: "✎" },
   { id: "wardrobe", name: "Wardrobe", icon: "♦" },
   { id: "food", name: "Food", icon: "◐" },
+  { id: "vehicles", name: "Vehicles", icon: "◎" },
+  { id: "insurance", name: "Insurance", icon: "☂" },
+  { id: "pets", name: "Pets", icon: "♥" },
   { id: "skills", name: "Skills", icon: "↑" },
   { id: "profile", name: "Profile", icon: "☺" },
   { id: "inventory", name: "Kitchen", icon: "◫" },
@@ -33,7 +37,6 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
 ];
 
 const LATER: { name: string; when: string }[] = [
-  { name: "Vehicles", when: "Milestone 5" },
   { name: "Staff", when: "Milestone 2 (next)" },
   { name: "Messages", when: "Milestone 3" },
   { name: "Contacts", when: "Milestone 3" },
@@ -49,7 +52,6 @@ const LATER: { name: string; when: string }[] = [
   { name: "Government", when: "Milestone 4" },
   { name: "Police", when: "Milestone 4" },
   { name: "Court", when: "Milestone 4" },
-  { name: "Insurance", when: "Milestone 5" },
   { name: "Transport Co", when: "Milestone 5" },
   { name: "Advertising", when: "Milestone 5" },
 ];
@@ -68,6 +70,9 @@ const TITLES: Record<string, string> = {
   courses: "Courses",
   wardrobe: "Wardrobe",
   food: "Food delivery",
+  vehicles: "Vehicles",
+  insurance: "Insurance",
+  pets: "Pets",
   goals: "Goals",
   perks: "Perks",
   people: "People",
@@ -108,7 +113,7 @@ export function PhoneSheet({ s }: { s: State }) {
                     ? Number(!!s.stories.active?.here)
                     : a.id === "treasure"
                       ? Number(!s.treasure.found)
-                      : 0;
+                      : lateBadge(a.id, s);
               return (
                 <li key={a.id}>
                   <button className={styles.app} onClick={() => open(a.id)}>
@@ -150,6 +155,9 @@ export function PhoneSheet({ s }: { s: State }) {
       {current === "courses" && <CoursesApp s={s} />}
       {current === "wardrobe" && <WardrobeApp s={s} />}
       {current === "food" && <FoodApp s={s} />}
+      {current === "vehicles" && <VehiclesApp s={s} />}
+      {current === "insurance" && <InsuranceApp s={s} />}
+      {current === "pets" && <PetsApp s={s} />}
       {current === "skills" && <Skills s={s} />}
       {current === "profile" && <Profile s={s} />}
       {current === "inventory" && <Inventory s={s} />}
