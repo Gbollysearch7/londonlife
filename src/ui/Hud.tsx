@@ -115,8 +115,8 @@ export function ProgressStrip({ s }: { s: State }) {
   const startMs = new Date(s.activity ? s.activity.startedAt : s.journey!.departedAt).getTime();
   const endMs = new Date(s.activity ? s.activity.endsAt : s.journey!.arrivesAt).getTime();
   const pct = Math.min(100, Math.max(0, ((now - startMs) / Math.max(1, endMs - startMs)) * 100));
-  const title = s.activity ? s.activity.label : `${s.journey!.mode === "bus" ? "Bus" : "Walking"} to ${venue(s.journey!.destination)?.name}`;
-  const rule = s.activity ? s.activity.cancelRule : s.journey!.farePence ? "You'll turn back to where you started. Bus fares aren't refunded." : "You'll turn back to where you started.";
+  const title = s.activity ? s.activity.label : `${({ walk: "Walking", bus: "Bus", tube: "Tube", taxi: "Taxi" } as Record<string, string>)[s.journey!.mode] ?? "Travelling"} to ${venue(s.journey!.destination)?.name}`;
+  const rule = s.activity ? s.activity.cancelRule : s.journey!.farePence ? "You'll turn back to where you started. Fares aren't refunded." : "You'll turn back to where you started.";
   return (
     <div className={styles.progress} role="status" aria-live="polite">
       <div className={styles.progressHead}>

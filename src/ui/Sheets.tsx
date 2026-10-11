@@ -174,27 +174,58 @@ export function GroceryCounter({ s }: { s: State }) {
   );
 }
 
+const TAG_FILTERS = [
+  { id: "all", label: "All" },
+  { id: "food", label: "Food" },
+  { id: "earn", label: "Earn" },
+  { id: "learn", label: "Learn" },
+  { id: "fitness", label: "Fitness" },
+  { id: "music", label: "Music" },
+  { id: "night", label: "Night out" },
+  { id: "free", label: "Free" },
+  { id: "outdoors", label: "Outdoors" },
+];
+
 export function MapSheet({ s }: { s: State }) {
   const setSheet = useGame((x) => x.setSheet);
   const run = useGame((x) => x.run);
   const pending = useGame((x) => x.pending);
+  const focus = useGame((x) => x.mapFocus);
+  const setFocus = useGame((x) => x.setMapFocus);
   const [query, setQuery] = useState("");
-  const list = s.directory.filter((d) => `${d.name} ${d.district} ${d.blurb}`.toLowerCase().includes(query.toLowerCase()));
-  const busy = !!s.activity || !!s.journey;
+  const [tag, setTag] = useState("all");
+  const busy = !!s.activity || !!s.journey || !!s.shift;
+  const list = s.directory
+    .filter((d) => `${d.name} ${d.district} ${d.blurb}`.toLowerCase().includes(query.toLowerCase()))
+    .filter((d) => tag === "all" || d.tags.includes(tag))
+    .sort((a, b) => Number(b.id === focus) - Number(a.id === focus) || Number(b.here) - Number(a.here));
+  useEffect(() => {
+    if (focus) document.getElementById(`place-${focus}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [focus]);
   return (
-    <Sheet title="Camden & the City" onClose={() => setSheet(null)}>
-      <CamdenMap s={s} />
-      <label className="field" style={{ marginTop: 12 }}>
+    <Sheet title="London" onClose={() => setSheet(null)}>
+      <p className="tiny" style={{ marginTop: 0 }}>
+        Tap a pin on the map or pick a place below. Fares and times are fictional game values.
+      </p>
+      <label className="field">
         <span className="tiny">Search places</span>
-        <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Food, community, home…" />
+        <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Music, gym, market, Brixton…" />
       </label>
+      <div className={styles.filters}>
+        {TAG_FILTERS.map((t) => (
+          <button key={t.id} className={`${styles.filter} ${tag === t.id ? styles.filterOn : ""}`} aria-pressed={tag === t.id} onClick={() => setTag(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
       <ul className={styles.list}>
         {list.map((d) => (
-          <li key={d.id} className={styles.place}>
+          <li key={d.id} id={`place-${d.id}`} className={styles.place} style={d.id === focus ? { borderColor: "var(--gold)", boxShadow: "0 0 0 2px rgba(198,156,88,.35)" } : undefined} onClick={() => setFocus(d.id)}>
             <div>
               <div className={styles.actionTitle}>
                 <strong>{d.name}</strong>
                 {d.here && <span className="chip good">You're here</span>}
+                {!d.open && <span className="chip bad">Closed now</span>}
               </div>
               <p className={styles.actionDesc}>{d.blurb}</p>
               <span className="tiny">
@@ -209,7 +240,8 @@ export function MapSheet({ s }: { s: State }) {
                     key={q.mode}
                     className="btn small secondary"
                     disabled={busy || !!pending || q.farePence > s.wallet.cashPence}
-                    onClick={async () => {
+                    onClick={async (e) => {
+                      e.stopPropagation();
                       if (await run("StartJourney", { destination: d.id, mode: q.mode }, "travel")) setSheet(null);
                     }}
                     aria-label={`${q.name} to ${d.name}: ${q.minutes} minutes, ${q.farePence ? money(q.farePence) : "free"}`}
@@ -219,44 +251,15 @@ export function MapSheet({ s }: { s: State }) {
                 ))}
               </div>
             )}
+            {!d.here && !d.open && <span className="tiny">You can travel now, but activities there wait until it opens.</span>}
           </li>
         ))}
       </ul>
-      {busy && <p className={styles.reason}>{s.journey ? "You're already travelling." : "Finish or stop your current activity before travelling."}</p>}
-      <p className="tiny">The Tube runs between districts. More boroughs are on the way. Fares are fictional game prices.</p>
+      {busy && (
+        <p className={styles.reason}>{s.journey ? "You're already travelling." : s.shift ? "You're on shift. Leave your shift before travelling." : "Finish or stop your current activity before travelling."}</p>
+      )}
+      <p className="tiny">The Tube runs between districts. Taxis go anywhere for a fare.</p>
     </Sheet>
-  );
-}
-
-function CamdenMap({ s }: { s: State }) {
-  const pts: Record<string, [number, number]> = { home: [50, 120], food_hall: [160, 70], common_room: [250, 130], city_office: [330, 52] };
-  return (
-    <svg viewBox="0 0 360 190" className={styles.map} role="img" aria-label="Map of the Camden slice">
-      <rect width="360" height="190" fill="#e9e1d2" rx="12" />
-      <path d="M-10 168 C 80 150, 140 190, 230 168 S 340 150, 370 162" stroke="#9fb7c4" strokeWidth="16" fill="none" />
-      <text x="250" y="182" fontSize="9" fill="#5b7584">Regent's Canal</text>
-      <path d="M20 95 H 340" stroke="#fbf8f2" strokeWidth="10" />
-      <path d="M190 10 V 160" stroke="#fbf8f2" strokeWidth="8" />
-      <text x="24" y="90" fontSize="9" fill="#7b858c">Pratt Row</text>
-      <text x="196" y="22" fontSize="9" fill="#7b858c">High Street</text>
-      <circle cx="110" cy="40" r="22" fill="#cfdcc4" />
-      <text x="96" y="43" fontSize="8" fill="#4f7a46">Green</text>
-      <rect x="292" y="14" width="64" height="60" rx="8" fill="#d6dce1" />
-      <text x="324" y="86" fontSize="9" fill="#5b6670" textAnchor="middle">The City</text>
-      <polyline points={`${pts.home} ${pts.food_hall} ${pts.common_room}`} fill="none" stroke="#bc3d3b" strokeDasharray="4 4" strokeWidth="2" />
-      <path d={`M${pts.food_hall} L${pts.city_office}`} stroke="#2f4a6b" strokeWidth="2.5" strokeDasharray="1 5" strokeLinecap="round" fill="none" />
-      {s.directory.map((d) => {
-        const [x, y] = pts[d.id];
-        return (
-          <g key={d.id}>
-            <circle cx={x} cy={y} r={d.here ? 9 : 7} fill={d.id === "home" ? "#c69c58" : "#234c42"} stroke="#fbf8f2" strokeWidth="2.5" />
-            <text x={x} y={y - 13} fontSize="10" fontWeight="700" textAnchor="middle" fill="#17232b">
-              {d.name.replace("Common Table Food Hall", "Food Hall").replace("The City Office", "City Office")}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
   );
 }
 

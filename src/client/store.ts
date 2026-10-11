@@ -30,6 +30,9 @@ interface Store {
   sheet: SheetId;
   phoneApp: PhoneApp;
   placement: Placement | null;
+  /** Venue selected on the city map. */
+  mapFocus: string | null;
+  setMapFocus: (id: string | null) => void;
   toasts: Toast[];
   setSheet: (s: SheetId) => void;
   setPhoneApp: (a: PhoneApp) => void;
@@ -65,6 +68,8 @@ export const useGame = create<Store>((set, get) => ({
   sheet: null,
   phoneApp: "home",
   placement: null,
+  mapFocus: null,
+  setMapFocus: (mapFocus) => set({ mapFocus }),
   toasts: [],
   setSheet: (sheet) => set({ sheet }),
   setPhoneApp: (phoneApp) => set({ phoneApp }),

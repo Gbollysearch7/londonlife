@@ -129,13 +129,13 @@ function River({ w = 20, d = 4 }: { w?: number; d?: number }) {
   });
   return (
     <group>
-      <mesh ref={ref} position={[0, -0.25, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <mesh ref={ref} position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[w, d, 1, 1]} />
         <meshStandardMaterial color="#4f6f7d" roughness={0.15} metalness={0.3} emissive="#6f93a3" emissiveIntensity={0.12} />
       </mesh>
-      <B p={[0, -0.1, -d / 2]} s={[w, 0.3, 0.2]} c="#9aa0a3" />
+      <B p={[0, 0.05, d / 2]} s={[w, 0.12, 0.25]} c="#9aa0a3" />
       {Array.from({ length: 6 }, (_, i) => (
-        <mesh key={i} position={[-w / 2 + (i + 0.5) * (w / 6), -0.22, (i % 2 ? 0.6 : -0.4)]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh key={i} position={[-w / 2 + (i + 0.5) * (w / 6), 0.03, (i % 2 ? 0.6 : -0.4)]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[1.4, 0.05]} />
           <meshBasicMaterial color="#c8dbe3" transparent opacity={0.5} />
         </mesh>
@@ -1001,9 +1001,62 @@ export function Prop({ s, night }: { s: PropSpec; night: boolean }) {
     case "pillar":
       body = <Cyl p={[0, 1.7, 0]} a={[0.22, 0.25, 3.4, 16]} c={c ?? IVORY} r={0.6} />;
       break;
+    case "paving":
+      body = (
+        <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <planeGeometry args={[s.w ?? 10, s.d ?? 1.4]} />
+          <meshStandardMaterial color={c ?? "#c9c1b2"} roughness={0.95} />
+        </mesh>
+      );
+      break;
+    case "kiosk":
+      body = (
+        <group>
+          <B p={[0, 1.2, 0]} s={[1.3, 2.4, 1.1]} c={c ?? "#234C42"} />
+          <mesh position={[0, 2.55, 0]} castShadow>
+            <coneGeometry args={[1.05, 0.5, 4]} />
+            <meshStandardMaterial color="#17232b" />
+          </mesh>
+          <B p={[0, 1.0, 0.56]} s={[0.7, 1.9, 0.02]} c="#2F4A6B" cast={false} />
+          <TextLabel text={s.text ?? "WC"} colour="#f4eee4" background="rgba(23,35,43,0.9)" font="700 56px system-ui, sans-serif" billboard={false} position={[0, 2.15, 0.57]} height={0.2} />
+        </group>
+      );
+      break;
+    case "court": {
+      const w = s.w ?? 5;
+      const d = s.d ?? 3.5;
+      body = (
+        <group>
+          <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+            <planeGeometry args={[w, d]} />
+            <meshStandardMaterial color={c ?? "#3f7a5a"} roughness={0.9} />
+          </mesh>
+          {[
+            [0, -d / 2, w, 0.05],
+            [0, d / 2, w, 0.05],
+            [-w / 2, 0, 0.05, d],
+            [w / 2, 0, 0.05, d],
+            [0, 0, 0.05, d],
+          ].map(([x, z, ww, dd], i) => (
+            <mesh key={i} position={[x, 0.01, z]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[ww, dd]} />
+              <meshBasicMaterial color="#f4eee4" />
+            </mesh>
+          ))}
+          {[-1, 1].map((sx) => (
+            <group key={sx} position={[sx * (w / 2 - 0.1), 0, 0]}>
+              <B p={[0, 0.5, -0.6]} s={[0.05, 1, 0.05]} c={IVORY} />
+              <B p={[0, 0.5, 0.6]} s={[0.05, 1, 0.05]} c={IVORY} />
+              <B p={[0, 1, 0]} s={[0.05, 0.05, 1.25]} c={IVORY} />
+            </group>
+          ))}
+        </group>
+      );
+      break;
+    }
   }
   return (
-    <group position={[s.p[0], 0, s.p[1]]} rotation={[0, deg(s.r), 0]}>
+    <group position={[s.p[0], s.lift ?? 0, s.p[1]]} rotation={[0, deg(s.r), 0]}>
       {body}
     </group>
   );

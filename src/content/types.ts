@@ -15,7 +15,22 @@ export const SKILL_IDS = [
 ] as const;
 export type SkillId = (typeof SKILL_IDS)[number];
 
-export type LocationId = "home" | "food_hall" | "common_room" | "city_office";
+export type LocationId =
+  | "home"
+  | "food_hall"
+  | "common_room"
+  | "city_office"
+  | "camden_backroom"
+  | "regents_green"
+  | "reading_library"
+  | "learning_campus"
+  | "east_yard"
+  | "last_stop_pub"
+  | "afterlight"
+  | "south_bank"
+  | "borough_market"
+  | "borough_athletics"
+  | "crown_and_curl";
 
 export interface TraitDef {
   id: string;
@@ -126,6 +141,10 @@ export interface ActivityDef {
   eventData?: Record<string, string>;
   npc?: string;
   anchor?: string;
+  /** London hours [from, to) when this can start; `to` may exceed 24 for after midnight. */
+  hours?: [number, number];
+  /** Which minigame runs instead of a plain timer (see content/minigames). */
+  minigame?: "quiz" | "rhythm";
 }
 
 export interface VenueDef {
@@ -138,6 +157,12 @@ export interface VenueDef {
   access: string;
   npcs: { id: string; name: string; role: string }[];
   street: { x: number };
+  /** Position on the compressed city map (units ≈ km; x east, y south). Home uses the home district. */
+  map?: [number, number];
+  /** Opening hours [open, close) in London time; close may exceed 24. Omitted = always open. */
+  hours?: [number, number];
+  /** Short tags for map filters and the directory. */
+  tags?: string[];
 }
 
 export interface MissionDef {

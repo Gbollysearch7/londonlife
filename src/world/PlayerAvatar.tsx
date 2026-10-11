@@ -7,7 +7,7 @@ import { useFx } from "@/client/fx";
 import { sfx } from "@/client/sound";
 import Avatar, { type Mood, type Outfit } from "./Avatar";
 import { Particles, type ParticleKind } from "./effects";
-import { findPath, type NavGrid, type P2 } from "./nav";
+import { findPath, isBlocked, toCell, type NavGrid, type P2 } from "./nav";
 import type { Pose, Prop } from "./poses";
 import { lastPositions, useScene } from "./sceneStore";
 
@@ -22,9 +22,24 @@ export interface Goal {
   prop?: Prop;
   hide?: boolean;
   particles?: ParticleKind;
+  /** Wander around the area while acting (jogs, walks). */
+  roam?: "walk" | "jog";
 }
 
 const SPEED = 1.8;
+
+/** A random walkable point near a centre, for roaming activities. */
+function roamPoint(grid: NavGrid, centre: P2, n: number): P2 {
+  for (let k = 0; k < 20; k++) {
+    const a = Math.sin(n * 91.3 + k * 17.1) * 43758.5453;
+    const b = Math.sin(n * 37.7 + k * 29.3) * 12345.6789;
+    const x = centre[0] + ((a - Math.floor(a)) - 0.5) * 7;
+    const z = centre[1] + ((b - Math.floor(b)) - 0.5) * 5;
+    const [i, j] = toCell(grid, x, z);
+    if (!isBlocked(grid, i, j)) return [x, z];
+  }
+  return centre;
+}
 
 function angleTo(from: number, to: number, k: number) {
   let d = to - from;
@@ -52,6 +67,8 @@ const PlayerAvatar = forwardRef<Group, { appearance: Appearance; mood: Mood; out
       goalKey: goal?.key ?? null,
       lastApproach: goal?.approach ?? null as P2 | null,
       stepClock: 0,
+      roamPath: [] as P2[],
+      roamLeg: 0,
     });
     const walkTarget = useScene((s) => s.walkTarget);
     const seenWalk = useRef(walkTarget?.n ?? 0);
@@ -71,6 +88,7 @@ const PlayerAvatar = forwardRef<Group, { appearance: Appearance; mood: Mood; out
       const key = goal?.key ?? null;
       if (key === s.goalKey) return;
       s.goalKey = key;
+      s.roamPath = [];
       if (goal) {
         s.path = findPath(grid, [s.x, s.z], goal.approach);
         s.lastApproach = goal.approach;
@@ -140,6 +158,25 @@ const PlayerAvatar = forwardRef<Group, { appearance: Appearance; mood: Mood; out
           s.phase = "act";
           setPhase("act");
         }
+      } else if (s.phase === "act" && goal?.roam) {
+        // Roaming activities keep moving between nearby walkable points.
+        if (!s.roamPath.length) s.roamPath = findPath(grid, [s.x, s.z], roamPoint(grid, goal.pos, ++s.roamLeg));
+        const next = s.roamPath[0];
+        if (next) {
+          const dx = next[0] - s.x;
+          const dz = next[1] - s.z;
+          const dist = Math.hypot(dx, dz);
+          const step = (goal.roam === "jog" ? 3.0 : 1.3) * dt;
+          if (dist <= step) {
+            s.x = next[0];
+            s.z = next[1];
+            s.roamPath.shift();
+          } else {
+            s.x += (dx / dist) * step;
+            s.z += (dz / dist) * step;
+          }
+          if (dist > 0.01) s.rot = angleTo(s.rot, Math.atan2(dx, dz), 1 - Math.exp(-dt * 10));
+        } else s.roamPath = [];
       } else if (s.phase === "act" && goal) {
         s.x = goal.pos[0];
         s.z = goal.pos[1];
@@ -164,7 +201,7 @@ const PlayerAvatar = forwardRef<Group, { appearance: Appearance; mood: Mood; out
         <group ref={group}>
           <Avatar appearance={appearance} pose={pose} prop={prop} mood={celebrating ? "happy" : mood} outfit={outfit} />
         </group>
-        {showFx && goal && <Particles kind={goal.particles!} position={fxPosition(goal)} />}
+        {showFx && goal && !goal.roam && <Particles kind={goal.particles!} position={fxPosition(goal)} />}
       </>
     );
   },

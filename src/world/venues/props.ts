@@ -15,6 +15,8 @@ export interface PropSpec {
   text?: string;
   /** Free-form variant index. */
   v?: number;
+  /** Raise the whole prop (e.g. a drum kit on a stage). */
+  lift?: number;
 }
 
 export type PropType =
@@ -81,7 +83,10 @@ export type PropType =
   | "neon"
   | "booth"
   | "clothes_rail"
-  | "pillar";
+  | "pillar"
+  | "paving"
+  | "kiosk"
+  | "court";
 
 /** Walk-blocking footprint [width, depth] at rotation 0, or null for decorations you can walk past. */
 export function propBlock(s: PropSpec): [number, number] | null {
@@ -174,6 +179,11 @@ export function propBlock(s: PropSpec): [number, number] | null {
       return [w ?? 1.8, 0.6];
     case "pillar":
       return [0.5, 0.5];
+    case "kiosk":
+      return [1.4, 1.2];
+    case "paving":
+    case "court":
+      return null;
     case "pavilion":
     case "picnic_blanket":
     case "dance_floor":

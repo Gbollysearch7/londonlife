@@ -32,6 +32,7 @@ export function anchorGoal(key: string, anchor: AnchorSpec, visual: ReturnType<t
     prop: v.prop,
     hide: v.hide,
     particles: v.particles,
+    roam: v.roam,
   };
 }
 

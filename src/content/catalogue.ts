@@ -37,11 +37,18 @@ export const ITEMS: ItemDef[] = [
   { id: "rice", name: "Rice", kind: "grocery", pricePence: 100, unit: "portion" },
   { id: "plantain", name: "Plantain", kind: "grocery", pricePence: 90, unit: "each" },
   { id: "snack_bar", name: "Snack bar", kind: "grocery", pricePence: 100, unit: "each" },
+  { id: "potato", name: "Baking potato", kind: "grocery", pricePence: 70, unit: "each" },
+  { id: "cheese", name: "Cheddar", kind: "grocery", pricePence: 150, unit: "portion" },
+  { id: "chickpeas", name: "Chickpeas", kind: "grocery", pricePence: 90, unit: "tin" },
+  { id: "peppers", name: "Peppers", kind: "grocery", pricePence: 80, unit: "portion" },
   { id: "tea_and_toast", name: "Tea and toast", kind: "meal", eat: { hunger: 20, energy: 6, fun: 3 } },
   { id: "beans_on_toast", name: "Beans on toast", kind: "meal", eat: { hunger: 35, fun: 2 } },
   { id: "egg_on_toast", name: "Egg on toast", kind: "meal", eat: { hunger: 30, energy: 4 } },
   { id: "pasta_bowl", name: "Pasta bowl", kind: "meal", eat: { hunger: 40, fun: 4 } },
   { id: "jollof_rice", name: "Jollof rice with plantain", kind: "meal", eat: { hunger: 50, fun: 8 } },
+  { id: "jacket_potato", name: "Jacket potato with cheese", kind: "meal", eat: { hunger: 42, fun: 4, energy: 3 } },
+  { id: "chickpea_curry", name: "Chickpea curry with rice", kind: "meal", eat: { hunger: 52, fun: 8 } },
+  { id: "stuffed_peppers", name: "Stuffed peppers", kind: "meal", eat: { hunger: 46, fun: 10, energy: 4 } },
 ];
 
 export const RECIPES: RecipeDef[] = [
@@ -50,6 +57,9 @@ export const RECIPES: RecipeDef[] = [
   { id: "egg_on_toast", name: "Egg on toast", ingredients: { bread: 1, eggs: 1 }, makes: "egg_on_toast", minutes: 3, xp: 8, cookingLevel: 0 },
   { id: "pasta_bowl", name: "Pasta bowl", ingredients: { pasta: 1, tomato: 1 }, makes: "pasta_bowl", minutes: 4, xp: 10, cookingLevel: 0 },
   { id: "jollof_rice", name: "Jollof rice with plantain", ingredients: { rice: 1, tomato: 1, plantain: 1 }, makes: "jollof_rice", minutes: 6, xp: 16, cookingLevel: 2 },
+  { id: "jacket_potato", name: "Jacket potato", ingredients: { potato: 1, cheese: 1 }, makes: "jacket_potato", minutes: 5, xp: 10, cookingLevel: 0 },
+  { id: "chickpea_curry", name: "Chickpea curry", ingredients: { chickpeas: 1, tomato: 1, rice: 1 }, makes: "chickpea_curry", minutes: 7, xp: 18, cookingLevel: 3 },
+  { id: "stuffed_peppers", name: "Stuffed peppers", ingredients: { peppers: 1, rice: 1, cheese: 1 }, makes: "stuffed_peppers", minutes: 7, xp: 20, cookingLevel: 4 },
 ];
 
 export const furnitureDef = (id: string) => FURNITURE.find((f) => f.id === id);

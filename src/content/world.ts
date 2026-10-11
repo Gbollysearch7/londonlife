@@ -1,4 +1,5 @@
 import { ITEMS, RECIPES } from "./catalogue";
+import { CITY_ACTIVITIES, CITY_VENUES } from "./city";
 import type { ActivityDef, LocationId, MissionDef, VenueDef } from "./types";
 
 export const VENUES: VenueDef[] = [
@@ -12,6 +13,7 @@ export const VENUES: VenueDef[] = [
     access: "Yours",
     npcs: [],
     street: { x: -14 },
+    map: [0, 0],
   },
   {
     id: "food_hall",
@@ -23,6 +25,8 @@ export const VENUES: VenueDef[] = [
     access: "Free entry",
     npcs: [{ id: "nia", name: "Nia", role: "Head cook (NPC)" }],
     street: { x: 2 },
+    map: [0.5, 0.1],
+    tags: ["food", "groceries", "earn"],
   },
   {
     id: "common_room",
@@ -34,6 +38,8 @@ export const VENUES: VenueDef[] = [
     access: "Free entry",
     npcs: [{ id: "bev", name: "Bev", role: "Centre coordinator (NPC)" }],
     street: { x: 16 },
+    map: [0.65, -0.15],
+    tags: ["free", "care", "earn"],
   },
   {
     id: "city_office",
@@ -45,12 +51,15 @@ export const VENUES: VenueDef[] = [
     access: "Staff entrance",
     npcs: [{ id: "priya", name: "Priya", role: "Office manager (NPC)" }],
     street: { x: 34 },
+    map: [4.5, 3.2],
+    tags: ["work"],
   },
+  ...CITY_VENUES,
 ];
 
 export const venue = (id: string) => VENUES.find((v) => v.id === id);
 
-/** Walking minutes between places in the Camden slice. */
+/** Authored walking minutes for the original Camden slice (kept stable); other pairs use map distance. */
 const WALK: Record<string, number> = {
   "home|food_hall": 6,
   "home|common_room": 8,
@@ -60,27 +69,58 @@ const WALK: Record<string, number> = {
   "common_room|city_office": 28,
 };
 
+/** Walking pace on the compressed map: minutes per map unit. */
+const MINUTES_PER_UNIT = 11;
+
 export const TRAVEL_MODES = {
   walk: { name: "Walk", farePence: 0, speed: 1, minMinutes: 1 },
   bus: { name: "Bus", farePence: 200, speed: 0.4, minMinutes: 2 },
   tube: { name: "Tube", farePence: 280, speed: 0.3, minMinutes: 4 },
+  taxi: { name: "Taxi", farePence: 0, speed: 0.22, minMinutes: 3 },
 } as const;
 export type TravelMode = keyof typeof TRAVEL_MODES;
 
-export function walkMinutes(a: LocationId, b: LocationId): number {
-  return WALK[`${a}|${b}`] ?? WALK[`${b}|${a}`] ?? 0;
+export function mapPos(id: LocationId): [number, number] {
+  return venue(id)?.map ?? [0, 0];
 }
 
-/** The Tube only serves trips between districts; short hops are walk or bus. */
+export function walkMinutes(a: LocationId, b: LocationId): number {
+  if (a === b) return 0;
+  const authored = WALK[`${a}|${b}`] ?? WALK[`${b}|${a}`];
+  if (authored) return authored;
+  const [ax, ay] = mapPos(a);
+  const [bx, by] = mapPos(b);
+  return Math.max(2, Math.round(Math.hypot(ax - bx, ay - by) * MINUTES_PER_UNIT));
+}
+
+/** The Tube only serves trips between districts; short hops are walk or bus. Taxis go anywhere. */
 export function modesFor(a: LocationId, b: LocationId): TravelMode[] {
-  return walkMinutes(a, b) >= 20 ? ["walk", "bus", "tube"] : ["walk", "bus"];
+  return walkMinutes(a, b) >= 20 ? ["walk", "bus", "tube", "taxi"] : ["walk", "bus", "taxi"];
+}
+
+/** Taxi fare: £4 flag plus £1 per walking-equivalent five minutes (fictional). */
+export function taxiFare(walk: number) {
+  return 400 + Math.ceil(walk / 5) * 100;
 }
 
 export function journeyQuote(a: LocationId, b: LocationId, mode: TravelMode) {
   const m = TRAVEL_MODES[mode];
-  const minutes = Math.max(m.minMinutes, Math.round(walkMinutes(a, b) * m.speed));
-  return { mode, name: m.name, farePence: m.farePence, minutes };
+  const walk = walkMinutes(a, b);
+  const minutes = Math.max(m.minMinutes, Math.round(walk * m.speed));
+  return { mode, name: m.name, farePence: mode === "taxi" ? taxiFare(walk) : m.farePence, minutes };
 }
+
+/** Is a venue open at this London hour? Hours may wrap past midnight (close > 24). */
+export function isOpenAt(v: Pick<VenueDef, "hours">, hour: number) {
+  if (!v.hours) return true;
+  const [o, c] = v.hours;
+  return (hour >= o && hour < c) || (c > 24 && hour + 24 >= o && hour + 24 < c);
+}
+
+/** Same rule for an activity's own time window. */
+export const inWindow = (w: [number, number] | undefined, hour: number) => !w || isOpenAt({ hours: w }, hour);
+
+export const hourLabel = (h: number) => `${String(h % 24).padStart(2, "0")}:00`;
 
 const NO_REFUND = "Cancelling ends the activity with no reward; costs already paid are not refunded.";
 
@@ -151,15 +191,16 @@ export const ACTIVITIES: ActivityDef[] = [
   { id: "office_coffee", label: "Coffee in the break kitchen", description: "Free filter coffee for staff.", location: "city_office", minutes: 2, costPence: 0, needs: { energy: 8, bladder: -6 }, cooldownMin: 45, cancelRule: NO_REFUND, event: "relaxed", anchor: "kitchen" },
   { id: "chat_priya", label: "Chat with Priya", description: "Priya is an NPC: a named local character, not another player.", location: "city_office", minutes: 2, costPence: 0, needs: { social: 12 }, xp: { skill: "charisma", amount: 4 }, cooldownMin: 30, cancelRule: NO_REFUND, event: "npc_chat", eventData: { npc: "priya" }, npc: "priya", anchor: "reception" },
   { id: "office_toilet", label: "Use the toilets", description: "", location: "city_office", minutes: 1, costPence: 0, needs: { bladder: 65 }, cancelRule: NO_REFUND, event: "toilet", anchor: "wc" },
+  ...CITY_ACTIVITIES,
   { id: "rest_sofa", label: "Rest on the old sofa", description: "Free, if a little lumpy.", location: "common_room", minutes: 10, costPence: 0, needs: { energy: 18 }, cancelRule: NO_REFUND, event: "napped", anchor: "sofa" },
 ];
 
 export const activityDef = (id: string) => ACTIVITIES.find((a) => a.id === id);
 
-/** Groceries sold at the Food Hall counter. */
-export const GROCERY_SHOP: { location: LocationId; items: string[] } = {
-  location: "food_hall",
-  items: ["bread", "beans", "pasta", "tomato", "tea", "eggs", "rice", "plantain", "snack_bar"],
+/** Grocery counters by venue. The market stocks ingredients the corner counter doesn't. */
+export const GROCERY_SHOPS: Partial<Record<LocationId, string[]>> = {
+  food_hall: ["bread", "beans", "pasta", "tomato", "tea", "eggs", "rice", "plantain", "snack_bar"],
+  borough_market: ["potato", "cheese", "chickpeas", "peppers", "tomato", "eggs", "rice", "plantain", "bread"],
 };
 
 export const MISSIONS: MissionDef[] = [
@@ -169,6 +210,10 @@ export const MISSIONS: MissionDef[] = [
   { id: "bus_twice", pool: "Explore", title: "Take the bus twice", event: "journey_arrived", match: { mode: "bus" }, target: 2, reward: { pence: 600, rep: 35 } },
   { id: "visit_food_hall", pool: "Explore", title: "Visit Common Table Food Hall", event: "journey_arrived", match: { destination: "food_hall" }, target: 1, reward: { pence: 300, rep: 15 } },
   { id: "talk_local", pool: "Explore", title: "Talk with a local", event: "npc_chat", target: 1, reward: { pence: 300, rep: 15 } },
+  { id: "visit_green", pool: "Explore", title: "Get some air at Regent's Green", event: "journey_arrived", match: { destination: "regents_green" }, target: 1, reward: { pence: 300, rep: 20 } },
+  { id: "visit_market", pool: "Explore", title: "Visit Borough Street Market", event: "journey_arrived", match: { destination: "borough_market" }, target: 1, reward: { pence: 500, rep: 25 } },
+  { id: "talk_three", pool: "Explore", title: "Chat with three different locals", event: "npc_chat", target: 3, reward: { pence: 600, rep: 35 } },
+  { id: "perform_once", pool: "Enterprise", title: "Perform on a stage or a pitch", event: "performed", target: 1, reward: { pence: 600, rep: 35 } },
   { id: "buy_furniture", pool: "Enterprise", title: "Buy a piece of furniture", event: "furniture_bought", target: 1, reward: { pence: 1000, rep: 50 } },
   { id: "paid_task", pool: "Enterprise", title: "Complete a paid task", event: "side_task_paid", target: 1, reward: { pence: 500, rep: 25 } },
   { id: "practise", pool: "Enterprise", title: "Practise a skill", event: "practised", target: 1, reward: { pence: 400, rep: 20 } },

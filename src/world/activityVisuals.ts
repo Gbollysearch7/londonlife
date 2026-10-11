@@ -10,6 +10,8 @@ export interface Visual {
   hide?: boolean;
   /** Sits on the anchor's seat rather than standing in front of it. */
   seated?: boolean;
+  /** Moves around the area while the activity runs instead of standing still. */
+  roam?: "walk" | "jog";
 }
 
 const BY_ID: Record<string, Visual> = {
@@ -35,6 +37,58 @@ const BY_ID: Record<string, Visual> = {
   cooking_demo: { pose: "idle", particles: "sparkle" },
   coding_club: { pose: "type", particles: "code", seated: true },
   office_coffee: { pose: "snack", prop: "cup" },
+  watch_band: { pose: "dance" },
+  backroom_dance: { pose: "dance", particles: "notes" },
+  open_mic: { pose: "perform", prop: "mic", particles: "notes" },
+  backroom_setup: { pose: "work" },
+  backroom_drink: { pose: "sit", seated: true },
+  park_walk: { pose: "walk", roam: "walk" },
+  park_jog: { pose: "jog", roam: "jog", particles: "sweat" },
+  picnic: { pose: "snack", prop: "plate", particles: "food" },
+  park_photos: { pose: "photo", particles: "sparkle" },
+  outdoor_fitness: { pose: "celebrate", particles: "sweat" },
+  park_bench: { pose: "sit", seated: true },
+  library_coding: { pose: "read", seated: true },
+  library_cooking: { pose: "read", seated: true },
+  library_business: { pose: "read", seated: true },
+  library_computer: { pose: "type", particles: "code", seated: true },
+  reading_group: { pose: "sit", particles: "chat", seated: true },
+  campus_study: { pose: "read", seated: true },
+  campus_tutorial: { pose: "talk", particles: "chat" },
+  campus_canteen: { pose: "snack", prop: "plate", particles: "food" },
+  five_a_side: { pose: "jog", roam: "jog", particles: "sweat" },
+  campus_tutor: { pose: "talk", particles: "chat" },
+  yard_coding: { pose: "type", particles: "code", seated: true },
+  yard_pitch: { pose: "talk", particles: "sparkle" },
+  yard_repair: { pose: "work", particles: "sparkle" },
+  yard_network: { pose: "snack", prop: "cup", particles: "chat" },
+  yard_bug_bash: { pose: "type", particles: "code", seated: true },
+  pub_quiz: { pose: "sit", particles: "chat", seated: true },
+  watch_match: { pose: "talk" },
+  pub_lunch: { pose: "eat", particles: "steam", seated: true },
+  pub_darts: { pose: "wave" },
+  pub_drink: { pose: "sit", seated: true },
+  club_dance: { pose: "dance", particles: "notes" },
+  dance_battle: { pose: "dance", particles: "sparkle" },
+  club_mocktail: { pose: "sit", seated: true },
+  river_walk: { pose: "walk", roam: "walk" },
+  busk: { pose: "strum", prop: "guitar", particles: "notes" },
+  skyline_photo: { pose: "photo", particles: "sparkle" },
+  watch_sunset: { pose: "sit", seated: true, particles: "hearts" },
+  street_snack: { pose: "snack", prop: "cup", particles: "food" },
+  market_street_food: { pose: "snack", prop: "plate", particles: "food" },
+  market_help: { pose: "work" },
+  market_photo_gig: { pose: "photo", particles: "sparkle" },
+  market_browse: { pose: "idle" },
+  gym_weights: { pose: "lift", particles: "sweat" },
+  gym_treadmill: { pose: "jog", particles: "sweat" },
+  gym_yoga: { pose: "yoga" },
+  gym_coaching: { pose: "lift", particles: "sweat" },
+  gym_shower: { pose: "idle", hide: true, particles: "steam" },
+  gym_shake: { pose: "snack", prop: "cup" },
+  salon_gossip: { pose: "sit", particles: "chat", seated: true },
+  salon_nails: { pose: "sit", particles: "sparkle", seated: true },
+  salon_assist: { pose: "work" },
 };
 
 export function visualFor(activityId: string): Visual {

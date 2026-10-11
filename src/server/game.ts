@@ -2,13 +2,13 @@ import crypto from "node:crypto";
 import { ALL_MISSIONS_BONUS, CONTENT_VERSION, DAILY_MISSION_SWAPS, FIRST_CARE_STARS, RESALE_FRACTION, START_NEEDS, URGENT_THRESHOLD } from "@/content/balance";
 import { AMBITIONS, APPEARANCE_OPTIONS, HOME_TIERS, ORIGINS, TRAITS, type Appearance } from "@/content/character";
 import { FURNITURE, ITEMS, furnitureDef, itemDef } from "@/content/catalogue";
-import { ACTIVITIES, GROCERY_SHOP, MISSIONS, TRAVEL_MODES, VENUES, activityDef, journeyQuote, missionDef, modesFor, venue, type TravelMode } from "@/content/world";
+import { ACTIVITIES, GROCERY_SHOPS, MISSIONS, TRAVEL_MODES, VENUES, activityDef, hourLabel, inWindow, isOpenAt, journeyQuote, missionDef, modesFor, venue, type TravelMode } from "@/content/world";
 import { NEED_IDS, SKILL_IDS, type ActivityDef, type LocationId, type Needs, type SkillId } from "@/content/types";
 import { NEED_CONSEQUENCES, NEED_LABELS, NEED_RECOVERY, applyEffects, settleNeeds } from "@/sim/needs";
 import { placementError, type Placed } from "@/sim/placement";
 import { computeMood, levelForXp, reputation, skillProgress, weatherFor, xpWithTraits } from "@/sim/progression";
 import { assignMissions, layoutStarterHome, missionProgress, pickOrigin, swapMission, type EventRow } from "@/sim/setup";
-import { durationMs, londonClock, londonDayKey, timeScale } from "@/sim/time";
+import { durationMs, londonClock, londonDayKey, londonHour, timeScale } from "@/sim/time";
 import { GameError, type Tx } from "./db";
 import { careerView, settleDueShift } from "./careers";
 
@@ -325,6 +325,10 @@ export function activityBlocker(def: ActivityDef, ctx: Ctx): string | null {
   if (ctx.shift) return "You're on shift. Leave your shift first.";
   if (ctx.running) return "Finish or cancel what you're doing first.";
   if (c.location !== def.location) return `Only at ${venue(def.location)?.name}.`;
+  const hour = londonHour(ctx.now);
+  const place = venue(def.location);
+  if (place && !isOpenAt(place, hour)) return `${place.name} is closed. Opens at ${hourLabel(place.hours![0])}.`;
+  if (!inWindow(def.hours, hour)) return `Only between ${hourLabel(def.hours![0])} and ${hourLabel(def.hours![1])}.`;
   if (def.requires && !ctx.home.tags.has(def.requires)) return `Needs ${requirementName(def.requires)} placed at home.`;
   if (def.skillGate && (ctx.skills[def.skillGate.skill] ?? 0) < def.skillGate.level) {
     return `Needs ${cap(def.skillGate.skill)} level ${def.skillGate.level}.`;
@@ -476,7 +480,8 @@ export async function startJourney(tx: Tx, accountId: string, p: { destination: 
      VALUES ($1,$2,$3,$4,$5,$6,'in_transit',$7,$8)`,
     [id, c.id, c.location, p.destination, p.mode, q.farePence, now, new Date(now.getTime() + durationMs(q.minutes))],
   );
-  return { message: `${q.name === "Walk" ? "Walking" : "On the bus"} to ${venue(p.destination)!.name}.` };
+  const how = { walk: "Walking", bus: "On the bus", tube: "On the Tube", taxi: "In a taxi" }[p.mode];
+  return { message: `${how} to ${venue(p.destination)!.name}.` };
 }
 
 export async function cancelJourney(tx: Tx, accountId: string, now: Date) {
@@ -488,16 +493,19 @@ export async function cancelJourney(tx: Tx, accountId: string, now: Date) {
   );
   if (!res.rowCount) throw new GameError("not_travelling", "You're not travelling — you may already have arrived.");
   const fare = Number(res.rows[0].fare_pence);
-  return { message: `Turned back to ${venue(res.rows[0].origin)!.name}.${fare ? " Bus fares aren't refunded." : ""}` };
+  return { message: `Turned back to ${venue(res.rows[0].origin)!.name}.${fare ? " Fares aren't refunded." : ""}` };
 }
 
 export async function buyGroceries(tx: Tx, accountId: string, p: { itemId: string; qty: number }, now: Date) {
   const c = await requireCharacter(tx, accountId);
   await settle(tx, c, now);
-  if (c.location !== GROCERY_SHOP.location) throw new GameError("wrong_place", `Groceries are sold at ${venue(GROCERY_SHOP.location)!.name}.`);
+  const stock = GROCERY_SHOPS[c.location];
+  if (!stock) throw new GameError("wrong_place", "There's no grocery counter here. Try the Food Hall or Borough Market.");
+  const here = venue(c.location)!;
+  if (!isOpenAt(here, londonHour(now))) throw new GameError("closed", `${here.name} is closed.`);
   const item = itemDef(p.itemId);
   const qty = Number(p.qty);
-  if (!item || !GROCERY_SHOP.items.includes(item.id)) throw new GameError("bad_item", "That isn't sold here.");
+  if (!item || !stock.includes(item.id)) throw new GameError("bad_item", "That isn't sold here.");
   if (!Number.isInteger(qty) || qty < 1 || qty > 10) throw new GameError("bad_qty", "Buy between 1 and 10.");
   const total = item.pricePence! * qty;
   await moveMoney(tx, c, -total, "groceries", `${qty} × ${item.name}`);
@@ -772,13 +780,17 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     journey,
     actions,
     groceries:
-      c.location === GROCERY_SHOP.location && !journey
-        ? GROCERY_SHOP.items.map((id) => ({ id, name: itemDef(id)!.name, pricePence: itemDef(id)!.pricePence!, unit: itemDef(id)!.unit }))
+      GROCERY_SHOPS[c.location] && !journey
+        ? GROCERY_SHOPS[c.location]!.map((id) => ({ id, name: itemDef(id)!.name, pricePence: itemDef(id)!.pricePence!, unit: itemDef(id)!.unit }))
         : [],
     directory: VENUES.map((v) => ({
       id: v.id,
       name: v.name,
-      district: v.district,
+      district: v.id === "home" ? ctx.home.home.district : v.district,
+      map: v.map ?? [0, 0],
+      tags: v.tags ?? [],
+      open: isOpenAt(v, londonHour(now)),
+      hours: v.hours ?? null,
       blurb: v.blurb,
       opening: v.opening,
       access: v.access,

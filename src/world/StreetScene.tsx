@@ -172,10 +172,47 @@ function Bus({ groupRef }: { groupRef: React.RefObject<Group | null> }) {
   );
 }
 
+function Cab({ groupRef }: { groupRef: React.RefObject<Group | null> }) {
+  return (
+    <group ref={groupRef}>
+      <mesh position={[0, 0.65, 0]} castShadow>
+        <boxGeometry args={[3.2, 0.8, 1.5]} />
+        <meshStandardMaterial color="#17191c" roughness={0.3} metalness={0.4} />
+      </mesh>
+      <mesh position={[-0.1, 1.25, 0]} castShadow>
+        <boxGeometry args={[1.9, 0.6, 1.4]} />
+        <meshStandardMaterial color="#17191c" roughness={0.3} metalness={0.4} />
+      </mesh>
+      {[0.45, -0.65].map((x) => (
+        <mesh key={x} position={[x, 1.25, 0.71]}>
+          <planeGeometry args={[0.8, 0.45]} />
+          <meshStandardMaterial color="#9fb3c4" roughness={0.1} metalness={0.5} />
+        </mesh>
+      ))}
+      <mesh position={[-0.1, 1.62, 0]}>
+        <boxGeometry args={[0.45, 0.12, 0.25]} />
+        <meshStandardMaterial color="#ffc46a" emissive="#ffb000" emissiveIntensity={0.9} />
+      </mesh>
+      {[-1.05, 1.05].map((x) => (
+        <mesh key={x} position={[x, 0.3, 0.6]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.3, 0.3, 0.25, 16]} />
+          <meshStandardMaterial color="#0e0f10" />
+        </mesh>
+      ))}
+      <mesh position={[1.62, 0.7, 0]}>
+        <boxGeometry args={[0.05, 0.25, 1.2]} />
+        <meshStandardMaterial color="#fff1c8" emissive="#ffe0a0" emissiveIntensity={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
 export default function StreetScene({ state, light }: { state: State; light: Lighting }) {
   const j = state.journey!;
   const from = venue(j.origin)!.street.x;
-  const to = venue(j.destination)!.street.x;
+  const rawTo = venue(j.destination)!.street.x;
+  // Keep every trip visibly moving, even between places that share a stretch of street.
+  const to = Math.abs(rawTo - from) < 6 ? Math.max(-36, Math.min(36, from + (rawTo >= from ? 12 : -12))) : rawTo;
   const avatar = useRef<Group>(null);
   const bus = useRef<Group>(null);
   const { camera } = useThree();
@@ -263,6 +300,8 @@ export default function StreetScene({ state, light }: { state: State; light: Lig
       <Rain on={state.weather.id === "rain" || state.weather.id === "drizzle"} />
       {j.mode === "bus" ? (
         <Bus groupRef={bus} />
+      ) : j.mode === "taxi" ? (
+        <Cab groupRef={bus} />
       ) : (
         <group ref={avatar} position={[from, 0.12, -1.6]}>
           <Avatar appearance={state.character.appearance} pose="walk" />
