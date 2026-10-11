@@ -7,6 +7,12 @@ import Skyline from "../../app/Skyline";
 import Game from "@/ui/Game";
 import { bootDatabase, createLocalPlayer, persistent } from "./boot";
 import styles from "./demo.module.css";
+import { useGame } from "@/client/store";
+import { useScene } from "@/world/sceneStore";
+import { useFx } from "@/client/fx";
+
+// Automation hook for the test build only: lets browser tests open in-world menus without pixel hunting.
+(window as unknown as Record<string, unknown>).__ll = { game: useGame, scene: useScene, fx: useFx };
 
 type View = "loading" | "gate" | "create" | "reveal" | "play" | "error";
 

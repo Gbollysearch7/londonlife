@@ -127,4 +127,6 @@ export interface Appearance {
   top: number;
   bottom: number;
   shoes: number;
+  /** Garment silhouettes and accessories from owned wardrobe items (set by the server, never by creation input). */
+  outfit?: { top?: number; bottom?: number; hat?: number; glasses?: boolean; scarf?: boolean };
 }

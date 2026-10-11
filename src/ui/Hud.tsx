@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useFx } from "@/client/fx";
+import { getSoundSettings, setSoundSettings, subscribeSound } from "@/client/sound";
 import { NEED_IDS } from "@/content/types";
 import { venue } from "@/content/world";
 import { serverNow, useGame } from "@/client/store";
@@ -28,6 +30,7 @@ export function TopBar({ s }: { s: State }) {
         </span>
       </div>
       <div className={styles.topGroup}>
+        <SoundToggle />
         <button className={styles.topBtn} onClick={() => setSheet("needs")} title={`Mood ${s.mood.score}`}>
           Mood <strong>{s.mood.label}</strong>
         </button>
@@ -200,5 +203,53 @@ export function Warnings({ s }: { s: State }) {
     <button className={styles.warning} onClick={() => setSheet("needs")}>
       <strong>{w.label} is low.</strong> {w.recovery}
     </button>
+  );
+}
+
+function SoundToggle() {
+  const [muted, setMuted] = useState(false);
+  useEffect(() => {
+    setMuted(getSoundSettings().muted);
+    return subscribeSound((x) => setMuted(x.muted));
+  }, []);
+  return (
+    <button className={`${styles.topBtn} ${styles.soundBtn}`} onClick={() => setSoundSettings({ muted: !muted })} aria-label={muted ? "Turn sound on" : "Mute sound"} aria-pressed={muted} title={muted ? "Sound off" : "Sound on"}>
+      <span aria-hidden>{muted ? "🔇" : "🔊"}</span>
+    </button>
+  );
+}
+
+const CONFETTI = Array.from({ length: 26 }, (_, i) => ({
+  dx: `${Math.round(Math.cos((i / 26) * Math.PI * 2) * (90 + (i % 5) * 30))}px`,
+  dy: `${Math.round(Math.sin((i / 26) * Math.PI * 2) * (70 + (i % 4) * 30) - 40)}px`,
+  rot: `${(i * 67) % 360}deg`,
+  bg: ["#bc3d3b", "#c69c58", "#234c42", "#2f4a6b", "#e0697a"][i % 5],
+  delay: `${(i % 6) * 0.03}s`,
+}));
+
+/** Level-ups, promotions and new titles: a banner with confetti that dismisses itself. */
+export function Celebrations() {
+  const list = useFx((x) => x.celebrations);
+  const dismiss = useFx((x) => x.dismiss);
+  const top = list[0];
+  useEffect(() => {
+    if (!top) return;
+    const t = setTimeout(() => dismiss(top.id), 3400);
+    return () => clearTimeout(t);
+  }, [top, dismiss]);
+  if (!top) return null;
+  return (
+    <div className={styles.celebrate} role="status" aria-live="assertive" onClick={() => dismiss(top.id)} key={top.id}>
+      <div className={styles.confetti} aria-hidden>
+        {CONFETTI.map((c, i) => (
+          <i key={i} style={{ background: c.bg, animationDelay: c.delay, ["--dx" as string]: c.dx, ["--dy" as string]: c.dy, ["--rot" as string]: c.rot }} />
+        ))}
+      </div>
+      <span className={styles.celebrateIcon} aria-hidden>
+        {top.icon}
+      </span>
+      <strong>{top.title}</strong>
+      <span>{top.sub}</span>
+    </div>
   );
 }

@@ -173,8 +173,9 @@ export function FurnitureModel({ defId, colour, w, d }: { defId: string; colour:
             <meshStandardMaterial color="#c9ced2" metalness={0.6} roughness={0.3} />
           </mesh>
           <Box p={[-0.5, 0.82, -0.15]} s={[0.1, 0.12, 0.1]} c="#BC3D3B" />
-          <Box p={[0, 0.25, 0.45]} s={[0.45, 0.05, 0.45]} c={DARK} />
-          <Box p={[0, 0.48, 0.66]} s={[0.45, 0.45, 0.05]} c={DARK} />
+          <Box p={[0, 0.43, 0.48]} s={[0.46, 0.05, 0.44]} c={DARK} />
+          <Box p={[0, 0.72, 0.68]} s={[0.46, 0.5, 0.05]} c={DARK} />
+          {[-0.19, 0.19].flatMap((x) => [0.3, 0.66].map((z) => <Box key={`${x}${z}`} p={[x, 0.21, z]} s={[0.04, 0.42, 0.04]} c={DARK} m={0.4} />))}
         </group>
       );
     case "guitar":

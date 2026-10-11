@@ -13,7 +13,7 @@ import styles from "./ui.module.css";
 
 type Action = State["actions"][number];
 
-function ActionRow({ a, onStart, disabled }: { a: Action; onStart: () => void; disabled: boolean }) {
+export function ActionRow({ a, onStart, disabled }: { a: Action; onStart: () => void; disabled: boolean }) {
   const chips = effectChips(a.needs);
   return (
     <li className={`${styles.action} ${!a.available ? styles.actionOff : ""}`}>
@@ -92,7 +92,6 @@ export function ActionsSheet({ s }: { s: State }) {
   const setSheet = useGame((x) => x.setSheet);
   const run = useGame((x) => x.run);
   const pending = useGame((x) => x.pending);
-  const [qty, setQty] = useState<Record<string, number>>({});
   const place = venue(s.character.location)!;
   const groups = ["Care", "Eat", "Cook", "Earn", "Learn"];
   const visible = s.actions.filter((a) => !a.hidden);
@@ -125,49 +124,53 @@ export function ActionsSheet({ s }: { s: State }) {
               </section>
             );
           })}
-          {s.groceries.length > 0 && (
-            <section className={styles.group}>
-              <h3>Grocery counter</h3>
-              <ul className={styles.list}>
-                {s.groceries.map((g) => {
-                  const q = qty[g.id] ?? 1;
-                  const owned = s.inventory.find((i) => i.id === g.id)?.qty ?? 0;
-                  return (
-                    <li key={g.id} className={styles.action}>
-                      <div className={styles.actionMain}>
-                        <strong>{g.name}</strong>
-                        <span className="tiny">
-                          {money(g.pricePence)} per {g.unit} · you have {owned}
-                        </span>
-                      </div>
-                      <div className={styles.qty}>
-                        <button aria-label={`Fewer ${g.name}`} onClick={() => setQty({ ...qty, [g.id]: Math.max(1, q - 1) })}>
-                          −
-                        </button>
-                        <span>{q}</span>
-                        <button aria-label={`More ${g.name}`} onClick={() => setQty({ ...qty, [g.id]: Math.min(10, q + 1) })}>
-                          +
-                        </button>
-                      </div>
-                      <button
-                        className="btn small"
-                        disabled={!!pending || g.pricePence * q > s.wallet.cashPence}
-                        onClick={() => run("BuyGroceries", { itemId: g.id, qty: q }, "groceries")}
-                      >
-                        Buy {money(g.pricePence * q)}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          )}
+          <GroceryCounter s={s} />
           {place.kind === "venue" && (
             <p className="tiny">Characters marked NPC are authored locals, not other players. Other players arrive in a later update.</p>
           )}
         </>
       )}
     </Sheet>
+  );
+}
+
+export function GroceryCounter({ s }: { s: State }) {
+  const run = useGame((x) => x.run);
+  const pending = useGame((x) => x.pending);
+  const [qty, setQty] = useState<Record<string, number>>({});
+  if (!s.groceries.length) return null;
+  return (
+    <section className={styles.group}>
+      <h3>Grocery counter</h3>
+      <ul className={styles.list}>
+        {s.groceries.map((g) => {
+          const q = qty[g.id] ?? 1;
+          const owned = s.inventory.find((i) => i.id === g.id)?.qty ?? 0;
+          return (
+            <li key={g.id} className={styles.action}>
+              <div className={styles.actionMain}>
+                <strong>{g.name}</strong>
+                <span className="tiny">
+                  {money(g.pricePence)} per {g.unit} · you have {owned}
+                </span>
+              </div>
+              <div className={styles.qty}>
+                <button aria-label={`Fewer ${g.name}`} onClick={() => setQty({ ...qty, [g.id]: Math.max(1, q - 1) })}>
+                  −
+                </button>
+                <span>{q}</span>
+                <button aria-label={`More ${g.name}`} onClick={() => setQty({ ...qty, [g.id]: Math.min(10, q + 1) })}>
+                  +
+                </button>
+              </div>
+              <button className="btn small" disabled={!!pending || g.pricePence * q > s.wallet.cashPence} onClick={() => run("BuyGroceries", { itemId: g.id, qty: q }, "groceries")}>
+                Buy {money(g.pricePence * q)}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

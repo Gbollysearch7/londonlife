@@ -1,0 +1,180 @@
+"use client";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { useFrame } from "@react-three/fiber";
+import type { Group } from "three";
+import type { Appearance } from "@/content/character";
+import { useFx } from "@/client/fx";
+import { sfx } from "@/client/sound";
+import Avatar, { type Mood, type Outfit } from "./Avatar";
+import { Particles, type ParticleKind } from "./effects";
+import { findPath, type NavGrid, type P2 } from "./nav";
+import type { Pose, Prop } from "./poses";
+import { lastPositions, useScene } from "./sceneStore";
+
+/** Where the avatar should be and what it should be doing there. Angles in radians. */
+export interface Goal {
+  key: string;
+  pos: P2;
+  y: number;
+  rotY: number;
+  approach: P2;
+  pose: Pose;
+  prop?: Prop;
+  hide?: boolean;
+  particles?: ParticleKind;
+}
+
+const SPEED = 1.8;
+
+function angleTo(from: number, to: number, k: number) {
+  let d = to - from;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return from + d * k;
+}
+
+/**
+ * The player's avatar in a home or venue. Movement is presentation only: the server decides what you
+ * are doing; this walks you there along a navigable path and plays the matching pose.
+ */
+const PlayerAvatar = forwardRef<Group, { appearance: Appearance; mood: Mood; outfit?: Outfit; grid: NavGrid; goal: Goal | null; spawn: P2; sceneKey: string; spawnRotY?: number }>(
+  function PlayerAvatar({ appearance, mood, outfit, grid, goal, spawn, sceneKey, spawnRotY = Math.PI }, ref) {
+    const group = useRef<Group>(null);
+    useImperativeHandle(ref, () => group.current!, []);
+    const start = lastPositions.get(sceneKey);
+    const st = useRef({
+      x: goal ? goal.pos[0] : start ? start[0] : spawn[0],
+      z: goal ? goal.pos[1] : start ? start[2] : spawn[1],
+      y: goal ? goal.y : 0,
+      rot: goal ? goal.rotY : spawnRotY,
+      path: [] as P2[],
+      phase: (goal ? "act" : "idle") as "idle" | "walk" | "settle" | "act",
+      goalKey: goal?.key ?? null,
+      lastApproach: goal?.approach ?? null as P2 | null,
+      stepClock: 0,
+    });
+    const walkTarget = useScene((s) => s.walkTarget);
+    const seenWalk = useRef(walkTarget?.n ?? 0);
+    const celebrateUntil = useFx((s) => s.celebrateUntil);
+    const [phase, setPhase] = useState(st.current.phase);
+    const [, rerender] = useState(0);
+    useEffect(() => {
+      const ms = celebrateUntil - Date.now();
+      if (ms <= 0) return;
+      const t = setTimeout(() => rerender((n) => n + 1), ms + 50);
+      return () => clearTimeout(t);
+    }, [celebrateUntil]);
+
+    // A new goal (activity started or changed) walks to its approach point; losing the goal steps off.
+    useEffect(() => {
+      const s = st.current;
+      const key = goal?.key ?? null;
+      if (key === s.goalKey) return;
+      s.goalKey = key;
+      if (goal) {
+        s.path = findPath(grid, [s.x, s.z], goal.approach);
+        s.lastApproach = goal.approach;
+        s.phase = s.path.length ? "walk" : "settle";
+      } else {
+        s.path = s.lastApproach ? findPath(grid, [s.x, s.z], s.lastApproach) : [];
+        s.y = 0;
+        s.phase = s.path.length ? "walk" : "idle";
+      }
+      setPhase(s.phase);
+    }, [goal, grid]);
+
+    // Tap-to-walk, only when not busy with an activity.
+    useEffect(() => {
+      if (!walkTarget || walkTarget.n === seenWalk.current) return;
+      seenWalk.current = walkTarget.n;
+      const s = st.current;
+      if (goal) return;
+      s.path = findPath(grid, [s.x, s.z], [walkTarget.x, walkTarget.z]);
+      s.phase = s.path.length ? "walk" : "idle";
+      setPhase(s.phase);
+    }, [walkTarget, goal, grid]);
+
+    useEffect(
+      () => () => {
+        const s = st.current;
+        if (s.phase !== "act") lastPositions.set(sceneKey, [s.x, 0, s.z]);
+      },
+      [sceneKey],
+    );
+
+    useFrame((_, rawDt) => {
+      const dt = Math.min(rawDt, 0.1);
+      const s = st.current;
+      if (s.phase === "walk") {
+        const next = s.path[0];
+        if (!next) {
+          s.phase = goal ? "settle" : "idle";
+          setPhase(s.phase);
+        } else {
+          const dx = next[0] - s.x;
+          const dz = next[1] - s.z;
+          const dist = Math.hypot(dx, dz);
+          const step = SPEED * dt;
+          if (dist <= step) {
+            s.x = next[0];
+            s.z = next[1];
+            s.path.shift();
+          } else {
+            s.x += (dx / dist) * step;
+            s.z += (dz / dist) * step;
+          }
+          if (dist > 0.01) s.rot = angleTo(s.rot, Math.atan2(dx, dz), 1 - Math.exp(-dt * 12));
+          s.stepClock += dt;
+          if (s.stepClock > 0.3) {
+            s.stepClock = 0;
+            sfx("step");
+          }
+        }
+      } else if (s.phase === "settle" && goal) {
+        const k = 1 - Math.exp(-dt * 9);
+        s.x += (goal.pos[0] - s.x) * k;
+        s.z += (goal.pos[1] - s.z) * k;
+        s.y += (goal.y - s.y) * k;
+        s.rot = angleTo(s.rot, goal.rotY, k);
+        if (Math.hypot(goal.pos[0] - s.x, goal.pos[1] - s.z) < 0.02) {
+          s.phase = "act";
+          setPhase("act");
+        }
+      } else if (s.phase === "act" && goal) {
+        s.x = goal.pos[0];
+        s.z = goal.pos[1];
+        s.y = goal.y;
+        s.rot = angleTo(s.rot, goal.rotY, 1 - Math.exp(-dt * 9));
+      }
+      const g = group.current;
+      if (g) {
+        g.position.set(s.x, s.y, s.z);
+        g.rotation.y = s.rot;
+        g.visible = !(s.phase === "act" && goal?.hide);
+      }
+    });
+
+    const celebrating = celebrateUntil > Date.now() && phase === "idle";
+    const pose: Pose = phase === "walk" ? "walk" : (phase === "act" || phase === "settle") && goal ? goal.pose : celebrating ? "celebrate" : "idle";
+    const prop = phase === "act" || phase === "settle" ? goal?.prop : undefined;
+    const showFx = phase === "act" && goal?.particles;
+
+    return (
+      <>
+        <group ref={group}>
+          <Avatar appearance={appearance} pose={pose} prop={prop} mood={celebrating ? "happy" : mood} outfit={outfit} />
+        </group>
+        {showFx && goal && <Particles kind={goal.particles!} position={fxPosition(goal)} />}
+      </>
+    );
+  },
+);
+
+export default PlayerAvatar;
+
+/** Particles sit above the head; a sleeper's head is ~1.5 m behind their feet along their facing. */
+function fxPosition(goal: Goal): [number, number, number] {
+  if (goal.particles === "zzz") return [goal.pos[0] - Math.sin(goal.rotY) * 1.45, goal.y + 1.0, goal.pos[1] - Math.cos(goal.rotY) * 1.45];
+  if (goal.hide) return [goal.pos[0], 2.0, goal.pos[1]];
+  return [goal.pos[0], goal.y + 1.95, goal.pos[1]];
+}

@@ -3,7 +3,10 @@ import dynamic from "next/dynamic";
 import { Component, useEffect, useState, type ReactNode } from "react";
 import { useGame } from "@/client/store";
 import type { State } from "@/client/api";
-import { Dock, NeedsBar, ProgressStrip, Toasts, TopBar, Warnings } from "./Hud";
+import { Celebrations, Dock, NeedsBar, ProgressStrip, Toasts, TopBar, Warnings } from "./Hud";
+import { HotspotCard } from "./HotspotCard";
+import { initSound } from "@/client/sound";
+import { useScene } from "@/world/sceneStore";
 import { ActionsSheet, BuySheet, MapSheet, NeedsSheet, PlacementBar } from "./Sheets";
 import { PhoneSheet } from "./Phone";
 import { ShiftPanel } from "./ShiftPanel";
@@ -60,6 +63,12 @@ export default function Game() {
   const placement = useGame((x) => x.placement);
   const refresh = useGame((x) => x.refresh);
 
+  useEffect(() => initSound(), []);
+  // Opening a sheet replaces any open in-world action card.
+  useEffect(() => {
+    if (sheet) useScene.getState().openHotspot(null);
+  }, [sheet]);
+
   useEffect(() => {
     refresh();
     const t = setInterval(() => {
@@ -104,10 +113,12 @@ export default function Game() {
       </div>
       <NeedsBar s={state} />
       <div className={styles.bottomCentre}>
+        {!placement && !sheet && <HotspotCard s={state} />}
         {placement ? <PlacementBar s={state} /> : state.shift ? <ShiftPanel s={state} shift={state.shift} /> : <ProgressStrip s={state} />}
         <Dock s={state} />
       </div>
       <Toasts />
+      <Celebrations />
       {sheet === "actions" && <ActionsSheet s={state} />}
       {sheet === "map" && <MapSheet s={state} />}
       {sheet === "buy" && <BuySheet s={state} />}

@@ -372,12 +372,15 @@ export interface CreateCharacterInput {
 export async function createCharacter(tx: Tx, accountId: string, input: CreateCharacterInput, now: Date, rand = Math.random) {
   const name = String(input.name ?? "").trim();
   if (!/^[\p{L}][\p{L} '\-]{0,23}$/u.test(name)) throw new GameError("bad_name", "Use 1–24 letters for your character's name.");
-  const a = input.appearance ?? ({} as Appearance);
+  const raw = (input.appearance ?? {}) as unknown as Record<string, unknown>;
+  // Only the known appearance fields are stored; anything else in the request is dropped.
+  const a = {} as Record<string, number>;
   for (const [k, opts] of Object.entries(APPEARANCE_OPTIONS)) {
-    const v = (a as unknown as Record<string, unknown>)[k];
+    const v = raw[k];
     if (!Number.isInteger(v) || (v as number) < 0 || (v as number) >= opts.length) {
       throw new GameError("bad_appearance", `Choose a ${k} option.`);
     }
+    a[k] = v as number;
   }
   const traits = input.traits ?? [];
   if (traits.length !== 2 || traits[0] === traits[1]) throw new GameError("bad_traits", "Choose exactly two different traits.");
@@ -685,6 +688,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
       produces: Object.entries(d.produces ?? {}).map(([id, qty]) => ({ id, name: itemDef(id)?.name ?? id, qty })),
       cancelRule: d.cancelRule,
       npc: d.npc ?? null,
+      anchor: d.anchor ?? d.requires ?? null,
       group: d.id.startsWith("cook_") ? "Cook" : d.id.startsWith("eat_") || d.id === "snack" ? "Eat" : d.payPence ? "Earn" : d.xp ? "Learn" : "Care",
       available: !blocker,
       reason: blocker,
