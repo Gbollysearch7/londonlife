@@ -10,6 +10,7 @@ import { GoalsApp, PeopleApp, PerksApp } from "./Goals";
 import { BankApp, CoursesApp, FoodApp, HomesApp, WardrobeApp } from "./Economy";
 import { StaffApp } from "./Household";
 import { FeedApp, MessagesApp, PeopleHub, PrivacySettings, RankingsApp } from "./Social";
+import { BoardApp, CompanyApp, MarketApp } from "./Market";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
@@ -29,6 +30,9 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "courses", name: "Courses", icon: "✎" },
   { id: "wardrobe", name: "Wardrobe", icon: "♦" },
   { id: "food", name: "Food", icon: "◐" },
+  { id: "market", name: "Market", icon: "⇄" },
+  { id: "company", name: "Company", icon: "▣" },
+  { id: "board", name: "Player work", icon: "◇" },
   { id: "skills", name: "Skills", icon: "↑" },
   { id: "profile", name: "Profile", icon: "☺" },
   { id: "inventory", name: "Kitchen", icon: "◫" },
@@ -44,6 +48,7 @@ const LATER: { name: string; when: string }[] = [
   { name: "Family", when: "Milestone 3" },
   { name: "Player work", when: "Milestone 3" },
   { name: "Company", when: "Milestone 3" },
+  { name: "Rankings", when: "Milestone 3" },
   { name: "Shops", when: "Milestone 3" },
   { name: "Investments", when: "Milestone 3" },
   { name: "Games", when: "Milestone 4" },
@@ -70,6 +75,9 @@ const TITLES: Record<string, string> = {
   courses: "Courses",
   wardrobe: "Wardrobe",
   food: "Food delivery",
+  market: "Market",
+  company: "Company",
+  board: "Player work",
   goals: "Goals",
   perks: "Perks",
   people: "People",
@@ -165,6 +173,9 @@ export function PhoneSheet({ s }: { s: State }) {
       {current === "courses" && <CoursesApp s={s} />}
       {current === "wardrobe" && <WardrobeApp s={s} />}
       {current === "food" && <FoodApp s={s} />}
+      {current === "market" && <MarketApp s={s} />}
+      {current === "company" && <CompanyApp s={s} />}
+      {current === "board" && <BoardApp s={s} />}
       {current === "skills" && <Skills s={s} />}
       {current === "profile" && <Profile s={s} />}
       {current === "inventory" && <Inventory s={s} />}

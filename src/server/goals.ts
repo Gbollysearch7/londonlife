@@ -2,6 +2,7 @@ import { AMBITION_MILESTONES, PERKS, WISHES, WISHES_PER_DAY, checkinReward, frie
 import { AMBITIONS, AMBITION_COOLDOWN_DAYS, HOME_TIERS } from "@/content/character";
 import { CAREERS } from "@/content/careers";
 import { VENUES } from "@/content/world";
+import { COMPANY, COMPANY_MAX_LEVEL } from "@/content/market";
 import { levelForXp } from "@/sim/progression";
 import { missionProgress, type EventRow } from "@/sim/setup";
 import { durationMs, londonDayKey } from "@/sim/time";
@@ -164,7 +165,14 @@ async function ambitionProgress(tx: Tx, c: CharRow, friends: Awaited<ReturnType<
     case "founder": {
       const e = await lv("enterprise");
       const pitched = (await tx.query("SELECT 1 FROM story_rewards WHERE character_id = $1 AND story_id = 'five_minute_pitch'", [c.id])).rowCount! > 0;
-      return { progress: Math.min(1, (e / 10) * 0.8 + (pitched ? 0.2 : 0)), note: `Enterprise level ${e} of 10${pitched ? " · pitched to investors" : " · try The Five-Minute Pitch story"}. Companies arrive with shared play.` };
+      // Skills and the pitch make up 60%; running a company to its top level makes up the other 40%.
+      const co = (await tx.query("SELECT name, level FROM companies WHERE character_id = $1", [c.id])).rows[0];
+      const coLevel = co ? Number(co.level) : 0;
+      const base = Math.min(1, (e / 10) * 0.8 + (pitched ? 0.2 : 0));
+      return {
+        progress: Math.min(1, base * 0.6 + (coLevel / COMPANY_MAX_LEVEL) * 0.4),
+        note: `Enterprise level ${e} of 10${pitched ? " · pitched to investors" : " · try The Five-Minute Pitch story"} · ${co ? `${co.name} at level ${coLevel} of ${COMPANY_MAX_LEVEL}` : `found a company at Enterprise ${COMPANY.minEnterprise} (Company app)`}.`,
+      };
     }
     default:
       return { progress: 0, note: "" };

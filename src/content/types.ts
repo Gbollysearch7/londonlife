@@ -157,6 +157,8 @@ export interface ActivityDef {
   requiresCondition?: boolean;
   /** Which minigame runs instead of a plain timer (see content/minigames). */
   minigame?: "quiz" | "rhythm";
+  /** Only for characters who have founded a company (see content/market). */
+  requiresCompany?: boolean;
 }
 
 export interface VenueDef {

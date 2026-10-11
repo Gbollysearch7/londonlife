@@ -1,5 +1,6 @@
 import { ITEMS, RECIPES } from "./catalogue";
 import { CITY_ACTIVITIES, CITY_VENUES } from "./city";
+import { COMPANY_ACTIVITIES } from "./market";
 import { COURSES } from "./courses";
 import { PARTY_ACTIVITIES } from "./household";
 import type { ActivityDef, LocationId, MissionDef, VenueDef } from "./types";
@@ -218,6 +219,7 @@ export const ACTIVITIES: ActivityDef[] = [
   ...CITY_ACTIVITIES,
   ...PARTY_ACTIVITIES,
   ...classActivities,
+  ...COMPANY_ACTIVITIES,
   { id: "rest_sofa", label: "Rest on the old sofa", description: "Free, if a little lumpy.", location: "common_room", minutes: 10, costPence: 0, needs: { energy: 18 }, cancelRule: NO_REFUND, event: "napped", anchor: "sofa" },
 ];
 
