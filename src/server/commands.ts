@@ -17,6 +17,7 @@ import * as tables from "./tables";
 import * as civic from "./civic";
 import * as late from "./lateGame";
 import * as venuesA from "./venues_a";
+import * as fleets from "./fleets";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -107,6 +108,11 @@ const HANDLERS: Record<string, Handler> = {
   CarePet: late.carePet as Handler,
   RehomePet: late.rehomePet as Handler,
   BuyArtwork: venuesA.buyArtwork as Handler,
+  RegisterFirm: fleets.registerFirm as Handler,
+  StartContract: fleets.startContract as Handler,
+  AbandonContract: fleets.abandonContract as Handler,
+  BookAd: fleets.bookAd as Handler,
+  CancelAd: fleets.cancelAd as Handler,
 };
 
 export interface CommandResult {

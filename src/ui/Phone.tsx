@@ -13,6 +13,7 @@ import { FeedApp, MessagesApp, PeopleHub, PrivacySettings, RankingsApp } from ".
 import { BoardApp, CompanyApp, MarketApp } from "./Market";
 import { GamesApp, GovernmentApp } from "./Games";
 import { InsuranceApp, PetsApp, VehiclesApp, lateBadge } from "./LateGame";
+import { AdvertisingApp, TransportApp } from "./Fleets";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
@@ -40,6 +41,8 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "vehicles", name: "Vehicles", icon: "◎" },
   { id: "insurance", name: "Insurance", icon: "☂" },
   { id: "pets", name: "Pets", icon: "♥" },
+  { id: "transport", name: "Transport Co", icon: "◧" },
+  { id: "ads", name: "Advertising", icon: "▤" },
   { id: "skills", name: "Skills", icon: "↑" },
   { id: "profile", name: "Profile", icon: "☺" },
   { id: "inventory", name: "Kitchen", icon: "◫" },
@@ -66,8 +69,6 @@ const LATER: { name: string; when: string }[] = [
   { name: "City feed", when: "Milestone 3" },
   { name: "Police", when: "Milestone 4" },
   { name: "Court", when: "Milestone 4" },
-  { name: "Transport Co", when: "Milestone 5" },
-  { name: "Advertising", when: "Milestone 5" },
 ];
 
 const TITLES: Record<string, string> = {
@@ -93,6 +94,8 @@ const TITLES: Record<string, string> = {
   vehicles: "Vehicles",
   insurance: "Insurance",
   pets: "Pets",
+  transport: "Transport Co",
+  ads: "Advertising",
   goals: "Goals",
   perks: "Perks",
   people: "People",
@@ -196,6 +199,8 @@ export function PhoneSheet({ s }: { s: State }) {
       {current === "vehicles" && <VehiclesApp s={s} />}
       {current === "insurance" && <InsuranceApp s={s} />}
       {current === "pets" && <PetsApp s={s} />}
+      {current === "transport" && <TransportApp s={s} />}
+      {current === "ads" && <AdvertisingApp s={s} />}
       {current === "skills" && <Skills s={s} />}
       {current === "profile" && <Profile s={s} />}
       {current === "inventory" && <Inventory s={s} />}

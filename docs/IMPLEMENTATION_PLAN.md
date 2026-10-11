@@ -122,7 +122,7 @@ Unchanged from spec chapter 38. Milestone 3 (shared life: presence, chat, consen
 | 14 | Travel, vehicles, streets | M2 | In progress — walk, bus, Tube, taxi, 3D map done; vehicles not started |
 | 15 | Wallet, bank, tax, bills | M2 | Done for wallet, savings, rent bills, wage tax; bonds not started |
 | 16 | Businesses, companies, shops | M3 | Deferred |
-| 17 | Land, construction, fleets | M5 | Deferred |
+| 17 | Land, construction, fleets | M5 | In progress — courier firm done (register with a car, seeded daily contract board, timed runs with fuel/wear, paid once on completion, firm levels, per-car daily limit; `tests/integration/fleets.test.ts`); land, construction and coach routes not started |
 | 18 | Player work and escrow | M3 | Deferred |
 | 19 | Social, family, visits, parties | M2 (NPCs), M3 (players) | In progress — NPC friendships done; players M3 |
 | 20 | Reputation, missions, wishes, perks | M2 | Done |
@@ -132,7 +132,7 @@ Unchanged from spec chapter 38. Milestone 3 (shared life: presence, chat, consen
 | 24 | Weather, condition, insurance | M1–M5 | In progress — weather affects mood, light, sound and walking (soaked); insurance M5 |
 | 25 | Government and elections | M4 | Deferred |
 | 26 | Game crime, custody, court | M4 | Deferred, crime mechanic still an open decision |
-| 27 | Feed, rankings, ads, notifications, moderation | M3–M4 | Deferred |
+| 27 | Feed, rankings, ads, notifications, moderation | M3–M4 | Deferred · ads done: weekly billboard slots sold atomically, preset templates/colours/slogans only (no free text), shown in four venues and the street, refunded only if never shown (`tests/integration/fleets.test.ts`) |
 | 28 | Visual identity | M1–M2 | In progress — living procedural world; final art pending |
 | 29 | Boroughs | M2 | In progress — 6 districts on the map, 15 venues |
 | 30 | Venue catalogue (35; venue 36 out of scope) | M2 | In progress — 15 of 35 |

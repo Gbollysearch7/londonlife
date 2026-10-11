@@ -10,6 +10,7 @@ import Avatar from "./Avatar";
 import { Bicycle, PlayerCar } from "./lateModels";
 import { TextLabel } from "./TextLabel";
 import type { Lighting } from "./lighting";
+import Billboards from "./Billboards";
 
 const BRICKS = ["#8b4b3c", "#7c4337", "#9a5a44", "#6f3f35", "#a36a52"];
 const STUCCO = ["#efe6d6", "#e6dcc8"];
@@ -268,6 +269,7 @@ export default function StreetScene({ state, light }: { state: State; light: Lig
         <Terrace key={i} i={i} x={-24 + i * 2.4} night={light.night} sign={signs[i]} />
       ))}
       <Tower x={venue("city_office")!.street.x} night={light.night} />
+      <Billboards where="street" state={state} />
       <TextLabel text="Home" position={[venue("home")!.street.x, 2.9, -4.2]} height={0.4} />
       {/* trees and streetlights */}
       {Array.from({ length: 9 }, (_, i) => (

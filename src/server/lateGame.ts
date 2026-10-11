@@ -281,6 +281,7 @@ export async function garageFor(tx: Tx, c: CharRow, now: Date) {
     const def = vehicleDef(String(v.def_id))!;
     if (new Date(v.delivered_at as Date) > now) return `Your ${def.name.toLowerCase()} is being delivered; it arrives at ${londonClock(new Date(v.delivered_at as Date))}.`;
     if (v.journey_id) return `Your ${def.name.toLowerCase()} is already on the move.`;
+    if (v.contract_id) return `Your ${def.name.toLowerCase()} is out on a courier contract.`;
     if (Number(v.owed_pence) > 0) return `Your ${def.name.toLowerCase()} is off the road until its upkeep is paid.`;
     if (Number(v.condition) < VEHICLE_RULES.minCondition) return `Your ${def.name.toLowerCase()} needs a service first (condition ${v.condition}%).`;
     if (v.location !== c.location) return `Your ${def.name.toLowerCase()} is parked at ${venue(String(v.location))?.name ?? "another place"}.`;
@@ -357,6 +358,7 @@ export async function sellVehicle(tx: Tx, accountId: string, p: { vehicleId: str
   await settle(tx, c, now);
   const v = await ownedVehicle(tx, c, p.vehicleId);
   if (v.journey_id) throw new GameError("in_use", "You can't sell it mid-journey.");
+  if (v.contract_id) throw new GameError("on_contract", "It's out on a courier contract. Wait until it's back, or call it back in the Transport Co app.");
   const def = vehicleDef(v.def_id)!;
   const value = vehicleResale(Number(v.price_pence), Number(v.condition));
   const owed = Number(v.owed_pence);
@@ -371,6 +373,7 @@ export async function serviceVehicle(tx: Tx, accountId: string, p: { vehicleId: 
   await settle(tx, c, now);
   const v = await ownedVehicle(tx, c, p.vehicleId);
   if (v.journey_id) throw new GameError("in_use", "Wait until you've arrived.");
+  if (v.contract_id) throw new GameError("on_contract", "It's out on a courier contract. Wait until it's back.");
   const def = vehicleDef(v.def_id)!;
   const cost = serviceCost(def, Number(v.condition));
   if (cost <= 0) throw new GameError("no_service", "It's in perfect condition already.");
@@ -548,6 +551,7 @@ export async function lateGameView(tx: Tx, c: CharRow, now: Date) {
     let reason: string | null = null;
     if (!delivered) reason = `Arrives at your home at ${londonClock(new Date(v.delivered_at))}.`;
     else if (v.journey_id) reason = "On the move with you.";
+    else if (v.contract_id) reason = "Out on a courier contract (Transport Co).";
     else if (Number(v.owed_pence) > 0) reason = `Off the road: ${fmtMoney(Number(v.owed_pence))} upkeep unpaid.`;
     else if (cond < VEHICLE_RULES.minCondition) reason = `Unsafe below ${VEHICLE_RULES.minCondition}% condition. Service it to ride again.`;
     else if (v.location !== c.location) reason = `Parked at ${venue(v.location)?.name ?? v.location}.`;
@@ -563,7 +567,7 @@ export async function lateGameView(tx: Tx, c: CharRow, now: Date) {
       locationName: venue(v.location)?.name ?? String(v.location),
       deliveredAt: new Date(v.delivered_at).toISOString(),
       delivered,
-      inUse: !!v.journey_id,
+      inUse: !!v.journey_id || !!v.contract_id,
       owedPence: Number(v.owed_pence),
       upkeepPence: def.upkeepPence,
       tripPence: def.tripPence,

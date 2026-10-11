@@ -20,6 +20,7 @@ import { useScene } from "./sceneStore";
 import { Prop, ShellView } from "./venues/kit";
 import { LAYOUTS, type AnchorSpec, type VenueLayout } from "./venues/layouts";
 import { buildVenueGrid } from "./venues/props";
+import Billboards from "./Billboards";
 
 const rad = (d: number) => (d * Math.PI) / 180;
 
@@ -153,6 +154,7 @@ export default function VenueScene({ state, light }: { state: State; light: Ligh
       {layout.props.map((p, i) => (
         <Prop key={i} s={p} night={light.night} />
       ))}
+      <Billboards where={loc} state={state} />
       {layout.npcs.map((n) => (
         <Npc
           key={n.id}
