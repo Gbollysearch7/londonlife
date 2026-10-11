@@ -5,7 +5,7 @@ let n = 0;
 export const key = () => `test-key-${Date.now()}-${n++}-${Math.random().toString(36).slice(2)}`;
 
 export async function resetDb() {
-  await pool().query("TRUNCATE accounts CASCADE");
+  await pool().query("TRUNCATE accounts, treasure_days CASCADE");
 }
 
 export async function makeAccount(email = `p${n++}@example.test`) {
