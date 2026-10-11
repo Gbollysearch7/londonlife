@@ -28,6 +28,7 @@ import { policyActivityCost, policyGroceryPrice, policyQuote, policyVenue, type 
 import { civicView, currentPolicy } from "./civic";
 import { gamesView } from "./tables";
 import { garageFor, lateGameView, settleLateGame } from "./lateGame";
+import { galleryView } from "./venues_a";
 
 // ───────────────────────────── rows ─────────────────────────────
 
@@ -347,7 +348,7 @@ export async function completeActivity(tx: Tx, c: CharRow, row: Record<string, u
   }
   if (def.event === "house_party") parts.push(...(await partyCompleted(tx, c, row, now)));
   if (def.event === "company_work") parts.push(...(await companyWorked(tx, c, row.id as string, new Date(Math.min(new Date(row.ends_at as Date).getTime(), now.getTime())))));
-  const moodlet = bonus?.moodlet ?? moodletForActivity(def.id, def.event, def.eventData?.skill as SkillId | undefined);
+  const moodlet = bonus?.moodlet ?? def.moodlet ?? moodletForActivity(def.id, def.event, def.eventData?.skill as SkillId | undefined);
   if (moodlet) {
     const m = await grantMoodlet(tx, c, moodlet, def.id, now);
     if (m) parts.push(`feeling: ${m.toLowerCase()}`);
@@ -436,6 +437,7 @@ export async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
 /** The single source of truth for "can this start?" — used by both the action list and StartActivity. */
 export function activityBlocker(def: ActivityDef, ctx: Ctx): string | null {
   const { c } = ctx;
+  if (def.comingLater) return def.comingLater;
   if (ctx.journey) return "You're travelling.";
   if (ctx.shift) return "You're on shift. Leave your shift first.";
   if (ctx.running) return "Finish or cancel what you're doing first.";
@@ -654,6 +656,7 @@ export async function buyFurniture(tx: Tx, accountId: string, p: { defId: string
   await settle(tx, c, now);
   const def = furnitureDef(p.defId);
   if (!def) throw new GameError("bad_item", "Unknown item.");
+  if (def.soldAt) throw new GameError("wrong_place", `${def.name} is an original piece sold only at ${venue(def.soldAt)?.name}.`);
   const colour = p.colour && def.colours.includes(p.colour) ? p.colour : def.colours[0];
   const id = crypto.randomUUID();
   const price = furniturePrice(def.pricePence, c.perks);
@@ -969,7 +972,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     minigame: await minigameView(tx, c, now),
     stories: await storyView(tx, c, now),
     treasure: await treasureView(tx, c, now),
-    catalogue: FURNITURE.map((f) => ({ ...f, pricePence: furniturePrice(f.pricePence, c.perks), listPence: f.pricePence })),
+    catalogue: FURNITURE.filter((f) => !f.soldAt).map((f) => ({ ...f, pricePence: furniturePrice(f.pricePence, c.perks), listPence: f.pricePence })),
     moodlets: moodletRows,
     goals,
     courses: await coursesView(tx, c, now),
@@ -982,6 +985,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     ...(await gamesView(tx, c, now)),
     ...(await civicView(tx, c, now)),
     ...(await lateGameView(tx, c, now)),
+    ...(await galleryView(tx, c, now)),
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };
   out.character.ambition.progress = goals.ambition.progress;

@@ -31,7 +31,18 @@ export type LocationId =
   | "borough_market"
   | "borough_athletics"
   | "crown_and_curl"
-  | "borough_health";
+  | "borough_health"
+  // Venues part A (spec ch. 30)
+  | "chalk_cushion"
+  | "riverside_arts"
+  | "hidden_chapter"
+  | "crossway_arcade"
+  | "skyline_kitchen"
+  | "community_chapel"
+  | "neighbourhood_mosque"
+  | "still_room"
+  | "city_fm"
+  | "kings_cross_gateway";
 
 export interface TraitDef {
   id: string;
@@ -99,6 +110,10 @@ export interface FurnitureDef {
   /** Capped decor mood contribution; copies of the same definition count once. */
   decor?: number;
   blurb: string;
+  /** Only sold at this venue (e.g. original gallery art), never in the home catalogue. */
+  soldAt?: LocationId;
+  /** Fictional maker credited on original pieces. */
+  artist?: string;
 }
 
 export interface ItemDef {
@@ -159,6 +174,10 @@ export interface ActivityDef {
   minigame?: "quiz" | "rhythm";
   /** Only for characters who have founded a company (see content/market). */
   requiresCompany?: boolean;
+  /** Shown but never startable: explains which later feature delivers it (no faked shared play). */
+  comingLater?: string;
+  /** Moodlet granted on completion (overrides the default mapping). */
+  moodlet?: string;
 }
 
 export interface VenueDef {

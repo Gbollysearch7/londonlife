@@ -1,6 +1,7 @@
 import { ITEMS, RECIPES } from "./catalogue";
 import { CITY_ACTIVITIES, CITY_VENUES } from "./city";
 import { COMPANY_ACTIVITIES } from "./market";
+import { ACTIVITIES_A, GROCERY_SHOPS_A, VENUES_A } from "./city_a";
 import { COURSES } from "./courses";
 import { PARTY_ACTIVITIES } from "./household";
 import { PET_FOOD_ID, PRESTIGE_ACTIVITIES } from "./lateGame";
@@ -59,6 +60,7 @@ export const VENUES: VenueDef[] = [
     tags: ["work"],
   },
   ...CITY_VENUES,
+  ...VENUES_A,
 ];
 
 export const venue = (id: string) => VENUES.find((v) => v.id === id);
@@ -224,6 +226,7 @@ export const ACTIVITIES: ActivityDef[] = [
   { id: "office_toilet", label: "Use the toilets", description: "", location: "city_office", minutes: 1, costPence: 0, needs: { bladder: 65 }, cancelRule: NO_REFUND, event: "toilet", anchor: "wc" },
   ...CITY_ACTIVITIES,
   ...PARTY_ACTIVITIES,
+  ...ACTIVITIES_A,
   ...classActivities,
   ...COMPANY_ACTIVITIES,
   ...PRESTIGE_ACTIVITIES,
@@ -236,6 +239,7 @@ export const activityDef = (id: string) => ACTIVITIES.find((a) => a.id === id);
 export const GROCERY_SHOPS: Partial<Record<LocationId, string[]>> = {
   food_hall: ["bread", "beans", "pasta", "tomato", "tea", "eggs", "rice", "plantain", "snack_bar", PET_FOOD_ID],
   borough_market: ["potato", "cheese", "chickpeas", "peppers", "tomato", "eggs", "rice", "plantain", "bread", PET_FOOD_ID],
+  ...GROCERY_SHOPS_A,
 };
 
 export const MISSIONS: MissionDef[] = [

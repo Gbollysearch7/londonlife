@@ -371,6 +371,9 @@ export const TREASURE_SPOTS: TreasureSpot[] = [
   { id: "t_board", venue: "common_room", anchor: "board", clue: "Pinned among the notices, a little light is waiting for a neighbour." },
   { id: "t_studio", venue: "borough_athletics", anchor: "studio", clue: "Breathe in, stretch out, and look down at the mats." },
   { id: "t_sofa", venue: "crown_and_curl", anchor: "sofa", clue: "Where clients wait and gossip flows, something sparkles in the cushions." },
+  { id: "t_pocket", venue: "chalk_cushion", anchor: "pool", clue: "Chalk on your fingers, green baize below: one pocket holds more than a ball." },
+  { id: "t_garden", venue: "riverside_arts", anchor: "garden", clue: "Behind the theatre, beside the ivy, a fountain hides a glint." },
+  { id: "t_departures", venue: "kings_cross_gateway", anchor: "board", clue: "Read where the trains are going, then look down: a treasure missed its train." },
 ];
 
 /** Reward by claim order (fictional): the first finder earns most. */

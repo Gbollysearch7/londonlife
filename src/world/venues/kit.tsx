@@ -9,6 +9,7 @@ import type { Group, Mesh } from "three";
 import { TextLabel } from "../TextLabel";
 import { brickTexture, floorTexture, panelTexture, plasterTexture } from "../textures";
 import type { PropSpec, Shell, WallSpec } from "./props";
+import { PropA } from "./kit_a";
 
 export type { PropSpec, PropType, Shell, WallSpec } from "./props";
 
@@ -590,6 +591,15 @@ export function Prop({ s, night }: { s: PropSpec; night: boolean }) {
           </mesh>
         </group>
       );
+      break;
+    case "pool_table":
+    case "easel":
+    case "art_frame":
+    case "train":
+    case "floor_rug":
+    case "lectern":
+    case "pew":
+      body = <PropA s={s} night={night} />;
       break;
     case "bookcase": {
       const w = s.w ?? 2;

@@ -16,6 +16,7 @@ import * as playerJobs from "./playerJobs";
 import * as tables from "./tables";
 import * as civic from "./civic";
 import * as late from "./lateGame";
+import * as venuesA from "./venues_a";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -105,6 +106,7 @@ const HANDLERS: Record<string, Handler> = {
   AdoptPet: late.adoptPet as Handler,
   CarePet: late.carePet as Handler,
   RehomePet: late.rehomePet as Handler,
+  BuyArtwork: venuesA.buyArtwork as Handler,
 };
 
 export interface CommandResult {

@@ -8,6 +8,7 @@ import { footprint, placementError, firstFreeSpot } from "@/sim/placement";
 import { useGame } from "@/client/store";
 import type { State } from "@/client/api";
 import Sheet from "./Sheet";
+import { GalleryCounter } from "./Gallery";
 import { NEED_META, duration, effectChips, money } from "./format";
 import styles from "./ui.module.css";
 
@@ -136,6 +137,7 @@ export function ActionsSheet({ s }: { s: State }) {
             );
           })}
           <GroceryCounter s={s} />
+          <GalleryCounter s={s} />
           {place.kind === "venue" && (
             <p className="tiny">Characters marked NPC are authored locals, not other players. Other players arrive in a later update.</p>
           )}
