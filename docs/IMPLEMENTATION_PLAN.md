@@ -122,7 +122,7 @@ Unchanged from spec chapter 38. Milestone 3 (shared life: presence, chat, consen
 | 14 | Travel, vehicles, streets | M2 | In progress — walk, bus, Tube, taxi, 3D map done; vehicles not started |
 | 15 | Wallet, bank, tax, bills | M2 | Done for wallet, savings, rent bills, wage tax; bonds not started |
 | 16 | Businesses, companies, shops | M3 | Deferred |
-| 17 | Land, construction, fleets | M5 | Deferred |
+| 17 | Land, construction, fleets | M5 | In progress — investment homes (cap 5, weekly NPC rent, seeded vacancies and valuations), land plots (cap 20) and four-stage timed construction done in the Invest app (`tests/integration/property.test.ts`); player tenancies, contractors and fleets not started |
 | 18 | Player work and escrow | M3 | Deferred |
 | 19 | Social, family, visits, parties | M2 (NPCs), M3 (players) | In progress — NPC friendships done; players M3 |
 | 20 | Reputation, missions, wishes, perks | M2 | Done |

@@ -5,6 +5,7 @@ import { londonDayKey, nextLondonWeekly } from "@/sim/time";
 import { londonWeekKey } from "@/sim/shift";
 import { GameError, type Tx } from "./db";
 import { emit, fmtMoney, loadCtx, moveMoney, requireCharacter, settle, type CharRow } from "./game";
+import { propertyWorth } from "./property";
 
 /** Savings: 0.5% a week, credited once per London day on balances of at least £10 (fictional rate). */
 export const SAVINGS = { weeklyRate: 0.005, minPence: 1000, maxCatchUpDays: 60 };
@@ -248,6 +249,7 @@ export async function economyView(tx: Tx, c: CharRow, now: Date) {
   const furniture = Number((await tx.query("SELECT COALESCE(SUM(price_pence), 0) AS s FROM furniture WHERE character_id = $1", [c.id])).rows[0].s);
   const homeValue = home.owned ? tier.pricePence ?? 0 : Number(home.deposit_pence);
   const arrears = Number(unpaid.s);
+  const property = await propertyWorth(tx, c.id, now);
   return {
     bank: {
       savingsPence: savings,
@@ -257,7 +259,8 @@ export async function economyView(tx: Tx, c: CharRow, now: Date) {
       unpaidPence: arrears,
       unpaidCount: Number(unpaid.n),
       bills,
-      netWorthPence: c.cash_pence + savings + Math.round(furniture / 2) + homeValue - arrears,
+      netWorthPence: c.cash_pence + savings + Math.round(furniture / 2) + homeValue - arrears + property,
+      propertyPence: property,
     },
     housing: {
       tierId: tier.id,

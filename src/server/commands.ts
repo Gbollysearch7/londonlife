@@ -18,6 +18,7 @@ import * as civic from "./civic";
 import * as late from "./lateGame";
 import * as venuesA from "./venues_a";
 import * as family from "./family";
+import * as property from "./property";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -125,6 +126,12 @@ const HANDLERS: Record<string, Handler> = {
   JoinParty: family.joinParty as Handler,
   EndParty: family.endParty as Handler,
   EndGuestVisit: family.endGuestVisit as Handler,
+  BuyInvestment: property.buyInvestment as Handler,
+  SellInvestment: property.sellInvestment as Handler,
+  BuyPlot: property.buyPlot as Handler,
+  SellPlot: property.sellPlot as Handler,
+  StartConstruction: property.startConstruction as Handler,
+  CancelConstruction: property.cancelConstruction as Handler,
 };
 
 export interface CommandResult {
