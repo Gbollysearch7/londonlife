@@ -15,6 +15,7 @@ import { ActionsSheet, BuySheet, MapSheet, NeedsSheet, PlacementBar } from "./Sh
 import { PhoneSheet } from "./Phone";
 import { ShiftPanel } from "./ShiftPanel";
 import { VisitBar } from "./Social";
+import { HostHomePanel } from "./Family";
 import styles from "./ui.module.css";
 
 const World = dynamic(() => import("@/world/World"), { ssr: false });
@@ -116,6 +117,7 @@ export default function Game() {
         <NextStep s={state} />
         <StoryPill s={state} />
         <VisitBar s={state} />
+        <HostHomePanel s={state} />
         <Warnings s={state} />
       </div>
       <NeedsBar s={state} />

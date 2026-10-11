@@ -31,6 +31,7 @@ import { reputation } from "@/sim/progression";
 import { durationMs, londonDayKey } from "@/sim/time";
 import { GameError, type Tx } from "./db";
 import { emit, fmtMoney, loadCtx, lockCharacter, moveMoney, requireCharacter, settle, type CharRow } from "./game";
+import { endFamilyTies } from "./family";
 
 /**
  * Shared life between real players (spec ch. 19, 27, 35.4): presence, friends with consent,
@@ -231,6 +232,7 @@ async function separate(tx: Tx, x: string, y: string, now: Date) {
     [x, y, now],
   );
   await tx.query("UPDATE home_visits SET ended_at = $3 WHERE ended_at IS NULL AND ((guest_id = $1 AND host_id = $2) OR (guest_id = $2 AND host_id = $1))", [x, y, now]);
+  await endFamilyTies(tx, x, y, now);
 }
 
 export async function unfriend(tx: Tx, accountId: string, p: { characterId: string }, now: Date) {

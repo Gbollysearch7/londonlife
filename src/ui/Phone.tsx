@@ -13,6 +13,7 @@ import { FeedApp, MessagesApp, PeopleHub, PrivacySettings, RankingsApp } from ".
 import { BoardApp, CompanyApp, MarketApp } from "./Market";
 import { GamesApp, GovernmentApp } from "./Games";
 import { InsuranceApp, PetsApp, VehiclesApp, lateBadge } from "./LateGame";
+import { FamilyApp, InvitationsApp, familyBadge } from "./Family";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
@@ -23,6 +24,8 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "perks", name: "Perks", icon: "✦" },
   { id: "people", name: "People", icon: "☺" },
   { id: "messages", name: "Messages", icon: "✉" },
+  { id: "family", name: "Family", icon: "❤" },
+  { id: "invitations", name: "Invitations", icon: "✧" },
   { id: "rankings", name: "Rankings", icon: "▲" },
   { id: "feed", name: "City feed", icon: "≡" },
   { id: "missions", name: "Missions", icon: "✓" },
@@ -54,8 +57,6 @@ const LATER: { name: string; when: string }[] = [
   { name: "Staff", when: "Milestone 2 (next)" },
   { name: "Messages", when: "Milestone 3" },
   { name: "Contacts", when: "Milestone 3" },
-  { name: "Invitations", when: "Milestone 3" },
-  { name: "Family", when: "Milestone 3" },
   { name: "Player work", when: "Milestone 3" },
   { name: "Company", when: "Milestone 3" },
   { name: "Rankings", when: "Milestone 3" },
@@ -97,6 +98,8 @@ const TITLES: Record<string, string> = {
   perks: "Perks",
   people: "People",
   messages: "Messages",
+  family: "Family",
+  invitations: "Invitations",
   rankings: "Rankings",
   feed: "City feed",
   treasure: "Daily treasure",
@@ -142,7 +145,7 @@ export function PhoneSheet({ s }: { s: State }) {
                     ? Number(!!s.stories.active?.here)
                     : a.id === "treasure"
                       ? Number(!s.treasure.found)
-                      : lateBadge(a.id, s);
+                      : lateBadge(a.id, s) || familyBadge(a.id, s);
               return (
                 <li key={a.id}>
                   <button className={styles.app} onClick={() => open(a.id)}>
@@ -176,6 +179,8 @@ export function PhoneSheet({ s }: { s: State }) {
       {current === "perks" && <PerksApp s={s} />}
       {current === "people" && <PeopleHub s={s} npcs={<PeopleApp s={s} />} />}
       {current === "messages" && <MessagesApp s={s} />}
+      {current === "family" && <FamilyApp s={s} />}
+      {current === "invitations" && <InvitationsApp s={s} />}
       {current === "rankings" && <RankingsApp s={s} />}
       {current === "feed" && <FeedApp s={s} />}
       {current === "stories" && <StoriesApp s={s} />}

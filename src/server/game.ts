@@ -30,6 +30,7 @@ import { civicView, currentPolicy } from "./civic";
 import { gamesView } from "./tables";
 import { garageFor, lateGameView, settleLateGame } from "./lateGame";
 import { galleryView } from "./venues_a";
+import { familyView } from "./family";
 
 // ───────────────────────────── rows ─────────────────────────────
 
@@ -990,6 +991,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     ...(await civicView(tx, c, now)),
     ...(await lateGameView(tx, c, now)),
     ...(await galleryView(tx, c, now)),
+    ...(await familyView(tx, c, ctx, now)),
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };
   out.character.ambition.progress = goals.ambition.progress;

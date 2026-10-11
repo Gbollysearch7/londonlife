@@ -17,6 +17,7 @@ import * as tables from "./tables";
 import * as civic from "./civic";
 import * as late from "./lateGame";
 import * as venuesA from "./venues_a";
+import * as family from "./family";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -107,6 +108,23 @@ const HANDLERS: Record<string, Handler> = {
   CarePet: late.carePet as Handler,
   RehomePet: late.rehomePet as Handler,
   BuyArtwork: venuesA.buyArtwork as Handler,
+  AskToDate: family.askToDate as Handler,
+  ProposePartnership: family.proposePartnership as Handler,
+  RespondRomance: family.respondRomance as Handler,
+  WithdrawRomance: family.withdrawRomance as Handler,
+  EndRelationship: family.endRelationship as Handler,
+  InviteToVisit: family.inviteToVisit as Handler,
+  InviteToHousehold: family.inviteToHousehold as Handler,
+  RespondInvitation: family.respondInvitation as Handler,
+  RevokeInvitation: family.revokeInvitation as Handler,
+  LeaveHousehold: family.leaveHousehold as Handler,
+  RemoveHouseholdMember: family.removeHouseholdMember as Handler,
+  UseHostHome: family.useHostHome as Handler,
+  OpenParty: family.openParty as Handler,
+  InviteToParty: family.inviteToParty as Handler,
+  JoinParty: family.joinParty as Handler,
+  EndParty: family.endParty as Handler,
+  EndGuestVisit: family.endGuestVisit as Handler,
 };
 
 export interface CommandResult {
