@@ -136,6 +136,7 @@ export const MOODLETS: MoodletDef[] = [
   { id: "lucky_find", label: "Lucky find", icon: "◆", strength: 8, minutes: 360 },
   { id: "story_high", label: "What a story", icon: "✦", strength: 8, minutes: 240 },
   { id: "good_company", label: "Good company", icon: "☺", strength: 5, minutes: 120 },
+  { id: "party_host", label: "Hosted a great party", icon: "♫", strength: 10, minutes: 240 },
   { id: "soaked", label: "Soaked through", icon: "☂", strength: -6, minutes: 60 },
   { id: "embarrassed", label: "A bit embarrassed", icon: "…", strength: -4, minutes: 60 },
 ];

@@ -3,12 +3,12 @@ import { CAREERS, GRADE_NAMES, SHIFT, WORK_STYLES, WORK_TASKS, careerDef, roleTi
 import { venue } from "@/content/world";
 import type { CareerDef } from "@/content/types";
 import { applyEffects } from "@/sim/needs";
-import { levelForXp } from "@/sim/progression";
 import { applyShift, londonWeekKey, londonWeekday, planTasks, shiftOutcome, wageTax, type ShiftTask, type StyleMark } from "@/sim/shift";
 import { durationMs, londonDayKey, londonHour } from "@/sim/time";
 import { GameError, type Tx } from "./db";
 import { perkEffects } from "@/content/goals";
 import { CERT_PERF_BONUS, certifiedCareers } from "./courses";
+import { effectiveLevels } from "./skills";
 import { addXp, emit, fmtMoney, loadCtx, moveMoney, requireCharacter, saveNeeds, type CharRow, type Ctx } from "./game";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -20,9 +20,9 @@ export function workdaysText(c: CareerDef) {
 const hourText = (h: number) => `${String(h).padStart(2, "0")}:00`;
 export const windowText = (c: CareerDef) => `start ${hourText(c.window[0])}–${hourText(c.window[1])}`;
 
-async function skillLevels(tx: Tx, charId: string) {
-  const rows = (await tx.query("SELECT skill_id, xp FROM skills WHERE character_id = $1", [charId])).rows;
-  return Object.fromEntries(rows.map((r) => [r.skill_id, levelForXp(Number(r.xp))])) as Record<string, number>;
+/** Effective (rust-adjusted) levels: the same numbers every other gate uses. */
+async function skillLevels(tx: Tx, charId: string, now: Date) {
+  return (await effectiveLevels(tx, charId, now)) as Record<string, number>;
 }
 
 async function progressOf(tx: Tx, charId: string) {
@@ -73,7 +73,7 @@ export async function joinCareer(tx: Tx, accountId: string, p: { careerId: strin
   if (ctx.shift) throw new GameError("on_shift", "Finish or leave your shift before changing jobs.");
   const current = await progressOf(tx, c.id);
   if (current?.careerId === career.id) throw new GameError("same_career", `You already work in ${career.name}.`);
-  const blocked = entryBlocker(career, await skillLevels(tx, c.id));
+  const blocked = entryBlocker(career, await skillLevels(tx, c.id, now));
   if (blocked) throw new GameError("not_eligible", blocked);
   await tx.query(
     `INSERT INTO career_progress (character_id, career_id, rank, grade, performance, shifts_at_grade, joined_at)
@@ -202,7 +202,7 @@ async function settleShift(tx: Tx, c: CharRow, row: Record<string, any>, end: Da
   let blockedBy: string | null = null;
   let newRole = role;
   if (prog && prog.careerId === career.id) {
-    const r = applyShift(prog, career, o, await skillLevels(tx, c.id));
+    const r = applyShift(prog, career, o, await skillLevels(tx, c.id, now));
     promoted = r.promoted;
     blockedBy = r.blockedBy;
     newRole = roleTitle(career, r.next.rank, r.next.grade);
@@ -253,7 +253,7 @@ async function settleShift(tx: Tx, c: CharRow, row: Record<string, any>, end: Da
 // ─────────────────────────── view ───────────────────────────
 
 export async function careerView(tx: Tx, c: CharRow, ctx: Ctx, now: Date) {
-  const skills = await skillLevels(tx, c.id);
+  const skills = await skillLevels(tx, c.id, now);
   const prog = await progressOf(tx, c.id);
   const today = await shiftsToday(tx, c.id, now);
   const catalogue = CAREERS.map((k) => ({

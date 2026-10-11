@@ -1,4 +1,5 @@
 import type { FurnitureDef, ItemDef, RecipeDef } from "./types";
+import { CHEF_MEALS } from "./household";
 
 const WOODS = ["#B98B5E", "#7A5134", "#D9C3A0"];
 const FABRICS = ["#234C42", "#BC3D3B", "#2F4A6B", "#C69C58", "#8C8C84"];
@@ -24,6 +25,7 @@ export const FURNITURE: FurnitureDef[] = [
   { id: "lamp", name: "Floor Lamp", category: "Light", pricePence: 2500, w: 1, d: 1, surface: "floor", quality: 1, colours: ["#C69C58", "#1A1A1A"], enables: [], decor: 1, blurb: "Warm evening light." },
   { id: "rug", name: "Woven Rug", category: "Decor", pricePence: 3000, w: 2, d: 2, surface: "overlay", quality: 2, colours: ["#A45A45", "#234C42", "#C69C58"], enables: [], decor: 2, blurb: "Lies under furniture." },
   { id: "poster", name: "Gig Poster", category: "Decor", pricePence: 800, w: 1, d: 1, surface: "wall", quality: 1, colours: ["#BC3D3B", "#2F4A6B", "#C69C58"], enables: [], decor: 1, blurb: "Hangs on a wall." },
+  { id: "party_speakers", name: "Party Speakers", category: "Fun", pricePence: 7200, w: 1, d: 1, surface: "floor", quality: 2, colours: ["#1A1A1A", "#F2F0EA", "#BC3D3B"], enables: ["speakers"], blurb: "Turn it up: throw a house party at home (one a night)." },
   { id: "wall_clock", name: "Wall Clock", category: "Decor", pricePence: 1500, w: 1, d: 1, surface: "wall", quality: 1, colours: ["#17232B", "#F2F0EA"], enables: [], decor: 1, blurb: "Hangs on a wall." },
 ];
 
@@ -52,6 +54,7 @@ export const ITEMS: ItemDef[] = [
   { id: "takeaway_curry", name: "Takeaway curry", kind: "meal", eat: { hunger: 45, fun: 8 } },
   { id: "takeaway_noodles", name: "Takeaway noodles", kind: "meal", eat: { hunger: 40, fun: 6 } },
   { id: "takeaway_pizza", name: "Takeaway pizza", kind: "meal", eat: { hunger: 50, fun: 10 } },
+  ...CHEF_MEALS,
 ];
 
 export const RECIPES: RecipeDef[] = [

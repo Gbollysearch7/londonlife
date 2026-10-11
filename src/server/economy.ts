@@ -230,6 +230,7 @@ export async function economyView(tx: Tx, c: CharRow, now: Date) {
   const savings = await savingsOf(tx, c.id);
   const bills = (await tx.query("SELECT * FROM bills WHERE character_id = $1 ORDER BY due_at DESC LIMIT 8", [c.id])).rows.map((b) => ({
     id: String(b.id),
+    kind: String(b.kind),
     description: String(b.description),
     period: String(b.period_key),
     amountPence: Number(b.amount_pence),

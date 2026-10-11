@@ -8,6 +8,7 @@ import * as economy from "./economy";
 import * as courses from "./courses";
 import * as wardrobe from "./wardrobe";
 import * as health from "./health";
+import * as household from "./household";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -50,6 +51,9 @@ const HANDLERS: Record<string, Handler> = {
   EquipOutfit: wardrobe.equipOutfit as Handler,
   ChangeHair: wardrobe.changeHair as Handler,
   OrderDelivery: health.orderDelivery as Handler,
+  HireStaff: household.hireStaff as Handler,
+  FireStaff: household.fireStaff as Handler,
+  CollectChefMeal: household.collectChefMeal as Handler,
 };
 
 export interface CommandResult {

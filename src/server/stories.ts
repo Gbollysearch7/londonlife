@@ -3,17 +3,17 @@ import { STORIES, TREASURE_SPOTS, choiceChance, storyDef, storyLayout, storyNode
 import type { SkillId } from "@/content/types";
 import { isOpenAt, venue } from "@/content/world";
 import { applyEffects } from "@/sim/needs";
-import { levelForXp } from "@/sim/progression";
 import { seededRandom } from "@/sim/shift";
 import { londonDayKey, londonHour } from "@/sim/time";
 import { GameError, type Tx } from "./db";
+import { effectiveLevels } from "./skills";
 import { perkEffects } from "@/content/goals";
 import { grantMoodlet } from "./goals";
 import { addXp, emit, fmtMoney, grantOnce, loadCtx, moveMoney, requireCharacter, saveNeeds, settle, type CharRow } from "./game";
 
-async function levels(tx: Tx, charId: string) {
-  const rows = (await tx.query("SELECT skill_id, xp FROM skills WHERE character_id = $1", [charId])).rows;
-  return Object.fromEntries(rows.map((r) => [r.skill_id, levelForXp(Number(r.xp))])) as Partial<Record<SkillId, number>>;
+/** Effective (rust-adjusted) levels, shared with every other skill check. */
+async function levels(tx: Tx, charId: string, now: Date) {
+  return (await effectiveLevels(tx, charId, now)) as Partial<Record<SkillId, number>>;
 }
 
 async function activeRun(tx: Tx, charId: string, lock = false) {
@@ -60,7 +60,7 @@ export async function chooseStory(tx: Tx, accountId: string, p: { choiceId: stri
   if (node.location && c.location !== node.location) throw new GameError("wrong_place", `This part of the story happens at ${venue(node.location)!.name}.`);
   const choice = node.choices.find((x) => x.id === p.choiceId);
   if (!choice) throw new GameError("bad_choice", "That isn't one of the options.");
-  const lv = await levels(tx, c.id);
+  const lv = await levels(tx, c.id, now);
   const blocked = choiceBlocker(choice, c, lv);
   if (blocked) throw new GameError("blocked", blocked);
 
@@ -114,10 +114,10 @@ export async function leaveStory(tx: Tx, accountId: string, _p: unknown, now: Da
   return { message: `Left “${storyDef(run.story_id)!.title}”. Money already spent isn't refunded; you can start again later.` };
 }
 
-export async function storyView(tx: Tx, c: CharRow) {
+export async function storyView(tx: Tx, c: CharRow, now: Date) {
   const run = await activeRun(tx, c.id);
   const rewards = (await tx.query("SELECT story_id, ending FROM story_rewards WHERE character_id = $1", [c.id])).rows;
-  const lv = await levels(tx, c.id);
+  const lv = await levels(tx, c.id, now);
   const catalogue = STORIES.map((s) => {
     const r = rewards.find((x) => x.story_id === s.id);
     const best = s.nodes.filter((n) => n.ending).reduce((m, n) => Math.max(m, n.ending!.rep), 0);

@@ -4,6 +4,7 @@ import { pool } from "@/server/db";
 import { HOME_TIERS } from "@/content/character";
 import { COURSES } from "@/content/courses";
 import { walkMinutes } from "@/content/world";
+import { utilitiesFor } from "@/content/household";
 import { cmd, ledgerMatches, makeAccount, makeCharacter, minutes, resetDb, state } from "./helpers";
 
 // Saturday 10 Oct 2026, 10:00 London — just after rent time, so the first rent falls on 17 Oct.
@@ -29,18 +30,20 @@ describe("L · rent and bills", () => {
   it("covers the first two weeks, then charges rent every Saturday exactly once", async () => {
     const acc = await makeAccount();
     await makeCharacter(acc, T0); // shared room, £80 a week
+    // Utility bills (Milestone 2 household) share the bills list; these checks are about rent.
+    const rent = (s: any) => s.bank.bills.filter((b: any) => b.kind === "rent");
     let s = await state(acc, days(8));
-    expect(s.bank.bills.map((b: any) => b.status)).toEqual(["covered"]);
+    expect(rent(s).map((b: any) => b.status)).toEqual(["covered"]);
     s = await state(acc, days(15));
-    expect(s.bank.bills.map((b: any) => b.status)).toEqual(["covered", "covered"]);
+    expect(rent(s).map((b: any) => b.status)).toEqual(["covered", "covered"]);
     const cash = s.wallet.cashPence;
     s = await state(acc, days(22));
-    expect(s.bank.bills[0].status).toBe("paid");
-    expect(cash - s.wallet.cashPence).toBe(8000);
+    expect(rent(s)[0].status).toBe("paid");
+    expect(cash - s.wallet.cashPence).toBe(8000 + utilitiesFor("shared_room"));
     // Reloading the same week never charges twice.
     await state(acc, days(22.2));
     s = await state(acc, days(23));
-    expect(s.bank.bills.filter((b: any) => b.status === "paid")).toHaveLength(1);
+    expect(rent(s).filter((b: any) => b.status === "paid")).toHaveLength(1);
     expect(await ledgerMatches(acc)).toBe(true);
   });
 
@@ -66,7 +69,7 @@ describe("L · rent and bills", () => {
     await makeCharacter(acc, T0, 0.999); // inherited wealth
     const s = await state(acc, days(30));
     expect(s.housing.owned).toBe(true);
-    expect(s.bank.bills).toHaveLength(0);
+    expect(s.bank.bills.filter((b: any) => b.kind === "rent")).toHaveLength(0);
   });
 });
 
@@ -117,7 +120,7 @@ describe("N · moving and buying", () => {
     await cmd(acc, "BuyHome", {}, T0);
     const s = await state(acc, days(30));
     expect(s.housing.owned).toBe(true);
-    expect(s.bank.bills.filter((b: any) => b.status === "paid")).toHaveLength(0);
+    expect(s.bank.bills.filter((b: any) => b.kind === "rent" && b.status === "paid")).toHaveLength(0);
     expect(s.goals.ambition.id === "home_owner" || true).toBe(true);
     await cmd(acc, "MoveHome", { tierId: "student_hall" }, days(30));
     await expect(cmd(acc, "BuyHome", {}, days(30))).rejects.toThrow(/can't be bought/);

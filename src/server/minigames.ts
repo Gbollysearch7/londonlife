@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 import { QUIZ, QUIZ_SECONDS_PER_QUESTION, RHYTHM, RHYTHM_LEAD_MS, beatMap, performanceScore, pickQuestions, quizPrize, quizScore, rhythmAccuracy, rhythmReward, songLengthMs } from "@/content/minigames";
 import type { ActivityDef } from "@/content/types";
 import { activityDef } from "@/content/world";
-import { levelForXp } from "@/sim/progression";
 import { GameError, type Tx } from "./db";
+import { effectiveLevel } from "./skills";
 import { completeActivity, requireCharacter, settle, type CharRow, type MinigameBonus } from "./game";
 
 /** Real time allowed to play a minigame, independent of any development time scale. */
@@ -17,10 +17,8 @@ export async function createRun(tx: Tx, c: CharRow, activityId: string, def: Act
   );
 }
 
-async function skillLevel(tx: Tx, charId: string, skill: string) {
-  const r = await tx.query("SELECT xp FROM skills WHERE character_id = $1 AND skill_id = $2", [charId, skill]);
-  return levelForXp(Number(r.rows[0]?.xp ?? 0));
-}
+/** Effective (rust-adjusted) level, shared with every other skill check. */
+const skillLevel = (tx: Tx, charId: string, skill: string, now: Date) => effectiveLevel(tx, charId, skill, now);
 
 /** Slack added to server-side time limits for network delay. */
 export const SUBMIT_SLACK_MS = 20_000;
@@ -66,7 +64,7 @@ export async function submitMinigame(tx: Tx, accountId: string, p: { runId: stri
     if (now.getTime() - begun < song * 0.8) throw new GameError("too_soon", "The song isn't over yet.");
     if (now.getTime() > begun + song + 3000 + SUBMIT_SLACK_MS) throw new GameError("too_late", "The song finished a while ago.");
     const { hits, accuracy } = rhythmAccuracy(notes, p.taps);
-    const level = await skillLevel(tx, c.id, spec.skill);
+    const level = await skillLevel(tx, c.id, spec.skill, now);
     const score = performanceScore(accuracy, level);
     const reward = rhythmReward(spec, score);
     bonus = { xpMult: reward.xpMult, pence: reward.pence, rep: Math.round(score * 12), stars: 0, label: `${Math.round(score * 100)}% performance`, incomeLabel: `${spec.title} tips`, moodlet: score >= 0.6 ? "buzzing" : score < 0.25 ? "embarrassed" : undefined };

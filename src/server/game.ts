@@ -19,6 +19,8 @@ import { wardrobeView } from "./wardrobe";
 import { conditionClearsAt, conditionDecay, healthView, setCondition, settleDeliveries, settleHealth } from "./health";
 import { classAttended, classBlocker, classesToday, courseRows, coursesView, type CourseRow } from "./courses";
 import { moodletForActivity, perkEffects } from "@/content/goals";
+import { effectiveLevels, skillRust } from "./skills";
+import { householdBlocker, householdMood, householdView, partyCompleted, settleHousehold } from "./household";
 
 // ───────────────────────────── rows ─────────────────────────────
 
@@ -236,6 +238,7 @@ export async function settle(tx: Tx, c: CharRow, now: Date) {
 
   notices.push(...(await settleDueShift(tx, c, now)));
   notices.push(...(await settleEconomy(tx, c, now)));
+  notices.push(...(await settleHousehold(tx, c, now)));
 
   const arrived = await tx.query(
     `UPDATE journeys SET status = 'arrived', settled_at = $2
@@ -333,6 +336,7 @@ export async function completeActivity(tx: Tx, c: CharRow, row: Record<string, u
     await classAttended(tx, c, def.eventData.course);
     parts.push("lesson quiz unlocked");
   }
+  if (def.event === "house_party") parts.push(...(await partyCompleted(tx, c, row, now)));
   const moodlet = bonus?.moodlet ?? moodletForActivity(def.id, def.event, def.eventData?.skill as SkillId | undefined);
   if (moodlet) {
     const m = await grantMoodlet(tx, c, moodlet, def.id, now);
@@ -373,7 +377,6 @@ export async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
   // Sequential: one pg client cannot run queries concurrently.
   const home = await homeContext(tx, c);
   const inv = await inventoryOf(tx, c.id);
-  const skillRows = await tx.query("SELECT skill_id, xp FROM skills WHERE character_id = $1", [c.id]);
   const recent = await tx.query(`SELECT def_id, status, period_key, started_at FROM activities WHERE character_id = $1 AND (period_key = $2 OR started_at > $3)`, [
     c.id,
     day,
@@ -401,7 +404,8 @@ export async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
     c,
     home,
     inv,
-    skills: Object.fromEntries(skillRows.rows.map((r) => [r.skill_id, levelForXp(Number(r.xp))])),
+    // Effective (rust-adjusted) levels: the single source for every skill gate.
+    skills: await effectiveLevels(tx, c.id, now),
     todayCounts,
     lastDone: Object.fromEntries(last.rows.map((r) => [r.def_id, r.at])),
     onceDone: new Set(once.rows.map((r) => r.reward_key)),
@@ -426,6 +430,8 @@ export function activityBlocker(def: ActivityDef, ctx: Ctx): string | null {
   if (place && !isOpenAt(place, hour)) return `${place.name} is closed. Opens at ${hourLabel(place.hours![0])}.`;
   if (!inWindow(def.hours, hour)) return `Only between ${hourLabel(def.hours![0])} and ${hourLabel(def.hours![1])}.`;
   if (def.requires && !ctx.home.tags.has(def.requires)) return `Needs ${requirementName(def.requires)} placed at home.`;
+  const household = householdBlocker(def, ctx);
+  if (household) return household;
   if (def.skillGate && (ctx.skills[def.skillGate.skill] ?? 0) < def.skillGate.level) {
     return `Needs ${cap(def.skillGate.skill)} level ${def.skillGate.level}.`;
   }
@@ -461,6 +467,7 @@ const REQUIREMENT_NAMES: Record<string, string> = {
   desk: "a desk",
   guitar: "a guitar",
   weights: "a dumbbell rack",
+  speakers: "party speakers",
 };
 const requirementName = (t: string) => REQUIREMENT_NAMES[t] ?? t;
 
@@ -771,13 +778,16 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     ...(ctx.home.tier.mood ? [{ label: `Living in a ${ctx.home.tier.name.toLowerCase()}`, strength: ctx.home.tier.mood }] : []),
     ...(arrears ? [{ label: "Unpaid rent", strength: -5 }] : []),
     ...(c.condition ? [{ label: "Feeling run down", strength: -8 }] : []),
+    ...(await householdMood(tx, c)),
   ]);
   const a = await ensureAssignment(tx, c, now);
 
   const skillRows = (await tx.query("SELECT skill_id, xp, best_level FROM skills WHERE character_id = $1", [c.id])).rows;
+  const rust = await skillRust(tx, c.id, now);
   const skills = SKILL_IDS.map((id) => {
     const r = skillRows.find((x) => x.skill_id === id);
-    return { id, name: id === "enterprise" ? "Enterprise" : cap(id), ...skillProgress(Number(r?.xp ?? 0)) };
+    const ru = rust[id];
+    return { id, name: id === "enterprise" ? "Enterprise" : cap(id), ...skillProgress(Number(r?.xp ?? 0)), effective: ru?.effective ?? 0, best: ru?.best ?? 0, rust: ru?.drop ?? 0, nextRustAt: ru?.nextDropAt ?? null };
   });
 
   const ledger = (await tx.query("SELECT * FROM ledger_entries WHERE character_id = $1 ORDER BY id DESC LIMIT 30", [c.id])).rows.map((r) => ({
@@ -931,7 +941,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     ledger,
     ...(await careerView(tx, c, ctx, now)),
     minigame: await minigameView(tx, c, now),
-    stories: await storyView(tx, c),
+    stories: await storyView(tx, c, now),
     treasure: await treasureView(tx, c, now),
     catalogue: FURNITURE.map((f) => ({ ...f, pricePence: furniturePrice(f.pricePence, c.perks), listPence: f.pricePence })),
     moodlets: moodletRows,
@@ -940,6 +950,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     wardrobe: await wardrobeView(tx, c),
     ...(await healthView(tx, c)),
     ...(await economyView(tx, c, now)),
+    ...(await householdView(tx, c, ctx, now)),
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };
   out.character.ambition.progress = goals.ambition.progress;
