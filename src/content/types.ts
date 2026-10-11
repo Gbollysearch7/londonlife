@@ -31,7 +31,16 @@ export type LocationId =
   | "borough_market"
   | "borough_athletics"
   | "crown_and_curl"
-  | "borough_health";
+  | "borough_health"
+  | "borough_stadium"
+  | "thames_house"
+  | "riverlight_jetty"
+  | "members_green"
+  | "pedal_patch"
+  | "build_yard"
+  | "air_terminal"
+  | "city_hall"
+  | "justice_hall";
 
 export interface TraitDef {
   id: string;
@@ -136,6 +145,8 @@ export interface ActivityDef {
   xp?: { skill: SkillId; amount: number };
   payPence?: number;
   skillGate?: { skill: SkillId; level: number };
+  /** Minimum reputation level (1-based, see REPUTATION_TITLES) — a visible prestige gate. */
+  repGate?: number;
   /** Maximum completions (plus running) per London calendar day. */
   dailyLimit?: number;
   /** Pays/rewards only once per character, ever. */
