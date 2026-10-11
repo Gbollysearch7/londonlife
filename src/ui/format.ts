@@ -1,6 +1,6 @@
 import type { NeedId } from "@/content/types";
 
-export const money = (p: number) => `${p < 0 ? "−" : ""}£${(Math.abs(p) / 100).toFixed(2)}`;
+export const money = (p: number) => `${p < 0 ? "−" : ""}£${(Math.abs(p) / 100).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function duration(minutes: number) {
   if (minutes < 1) return `${Math.round(minutes * 60)} sec`;

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { ALL_MISSIONS_BONUS, CONTENT_VERSION, DAILY_MISSION_SWAPS, FIRST_CARE_STARS, RESALE_FRACTION, START_NEEDS, URGENT_THRESHOLD } from "@/content/balance";
-import { AMBITIONS, APPEARANCE_OPTIONS, HOME_TIERS, ORIGINS, TRAITS, type Appearance } from "@/content/character";
+import { AMBITIONS, APPEARANCE_OPTIONS, HOME_DISTRICT_POS, HOME_TIERS, ORIGINS, STARTER_RENT_FREE_WEEKS, TRAITS, type Appearance } from "@/content/character";
 import { FURNITURE, ITEMS, furnitureDef, itemDef } from "@/content/catalogue";
 import { ACTIVITIES, GROCERY_SHOPS, MISSIONS, TRAVEL_MODES, VENUES, activityDef, hourLabel, inWindow, isOpenAt, journeyQuote, missionDef, modesFor, venue, type TravelMode } from "@/content/world";
 import { NEED_IDS, SKILL_IDS, type ActivityDef, type LocationId, type Needs, type SkillId } from "@/content/types";
@@ -8,12 +8,15 @@ import { NEED_CONSEQUENCES, NEED_LABELS, NEED_RECOVERY, applyEffects, settleNeed
 import { placementError, type Placed } from "@/sim/placement";
 import { computeMood, levelForXp, reputation, skillProgress, weatherFor, xpWithTraits } from "@/sim/progression";
 import { assignMissions, layoutStarterHome, missionProgress, pickOrigin, swapMission, type EventRow } from "@/sim/setup";
-import { durationMs, londonClock, londonDayKey, londonHour, timeScale } from "@/sim/time";
+import { durationMs, londonClock, londonDayKey, londonHour, nextLondonWeekly, timeScale } from "@/sim/time";
 import { GameError, type Tx } from "./db";
 import { careerView, settleDueShift } from "./careers";
 import { MINIGAME_WINDOW_MS, createRun, minigameView } from "./minigames";
 import { storyView, treasureView } from "./stories";
 import { activeMoodlets, goalsView, grantMoodlet } from "./goals";
+import { economyView, settleEconomy } from "./economy";
+import { wardrobeView } from "./wardrobe";
+import { classAttended, classBlocker, classesToday, courseRows, coursesView, type CourseRow } from "./courses";
 import { moodletForActivity, perkEffects } from "@/content/goals";
 
 // ───────────────────────────── rows ─────────────────────────────
@@ -217,6 +220,7 @@ export async function settle(tx: Tx, c: CharRow, now: Date) {
   for (const row of due.rows) notices.push(...(await completeActivity(tx, c, row, now)));
 
   notices.push(...(await settleDueShift(tx, c, now)));
+  notices.push(...(await settleEconomy(tx, c, now)));
 
   const arrived = await tx.query(
     `UPDATE journeys SET status = 'arrived', settled_at = $2
@@ -306,6 +310,10 @@ export async function completeActivity(tx: Tx, c: CharRow, row: Record<string, u
   }
   await emit(tx, c.id, def.event, { ...(def.eventData ?? {}), activity: def.id }, now);
   if (def.npc) await emit(tx, c.id, "npc_time", { npc: def.npc }, now);
+  if (def.event === "class_attended" && def.eventData?.course) {
+    await classAttended(tx, c, def.eventData.course);
+    parts.push("lesson quiz unlocked");
+  }
   const moodlet = bonus?.moodlet ?? moodletForActivity(def.id, def.event, def.eventData?.skill as SkillId | undefined);
   if (moodlet) {
     const m = await grantMoodlet(tx, c, moodlet, def.id, now);
@@ -336,6 +344,8 @@ export interface Ctx {
   running: Record<string, unknown> | null;
   journey: Record<string, unknown> | null;
   shift: Record<string, unknown> | null;
+  courses: Record<string, CourseRow>;
+  classesToday: number;
   now: Date;
 }
 
@@ -368,6 +378,8 @@ export async function loadCtx(tx: Tx, c: CharRow, now: Date): Promise<Ctx> {
     running: running.rows[0] ?? null,
     journey: journey.rows[0] ?? null,
     shift: shift.rows[0] ?? null,
+    courses: await courseRows(tx, c.id),
+    classesToday: await classesToday(tx, c.id, now),
     now,
   };
 }
@@ -390,6 +402,8 @@ export function activityBlocker(def: ActivityDef, ctx: Ctx): string | null {
   for (const [item, qty] of Object.entries(def.consumes ?? {})) {
     if ((ctx.inv[item] ?? 0) < qty) return `Needs ${qty} × ${itemDef(item)?.name}.`;
   }
+  const course = classBlocker(def, ctx.courses, ctx.classesToday);
+  if (course) return course;
   if (def.costPence > c.cash_pence) return `Costs ${fmtMoney(def.costPence)}; you have ${fmtMoney(c.cash_pence)}.`;
   if (def.once && ctx.onceDone.has(`activity:${def.id}`)) return "Already completed — this one pays once.";
   if (def.dailyLimit && (ctx.todayCounts[def.id] ?? 0) >= def.dailyLimit) return `Limit of ${def.dailyLimit} per day reached.`;
@@ -459,11 +473,11 @@ export async function createCharacter(tx: Tx, accountId: string, input: CreateCh
   if (!ins.rowCount) return { created: false };
   const c = toChar(ins.rows[0]);
   const tier = HOME_TIERS.find((t) => t.id === origin.homeTier)!;
-  const home = await tx.query("INSERT INTO homes (character_id, tier_id, district) VALUES ($1, $2, $3) RETURNING id", [
-    c.id,
-    tier.id,
-    tier.district,
-  ]);
+  const home = await tx.query(
+    `INSERT INTO homes (character_id, tier_id, district, owned, rent_pence, rent_due_at, rent_free_until, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+    [c.id, tier.id, tier.district, !!origin.ownsHome, tier.rentPence, nextLondonWeekly(now, 6, 9), new Date(now.getTime() + STARTER_RENT_FREE_WEEKS * 7 * 86_400_000), now],
+  );
   for (const { defId, spot } of layoutStarterHome(origin.furniture, tier.gridW, tier.gridD)) {
     const def = furnitureDef(defId)!;
     await tx.query(
@@ -529,8 +543,9 @@ export async function startJourney(tx: Tx, accountId: string, p: { destination: 
   if (ctx.journey) throw new GameError("travelling", "You're already travelling.");
   if (ctx.running) throw new GameError("busy", "Finish or cancel what you're doing first.");
   if (ctx.shift) throw new GameError("on_shift", "You're on shift. Leave your shift before travelling.");
-  if (!modesFor(c.location, p.destination).includes(p.mode)) throw new GameError("bad_mode", "The Tube only runs between districts.");
-  const q = journeyQuote(c.location, p.destination, p.mode);
+  const homeAt = HOME_DISTRICT_POS[ctx.home.home.district] ?? [0, 0];
+  if (!modesFor(c.location, p.destination, homeAt).includes(p.mode)) throw new GameError("bad_mode", "The Tube only runs between districts.");
+  const q = journeyQuote(c.location, p.destination, p.mode, homeAt);
   const id = crypto.randomUUID();
   await moveMoney(tx, c, -q.farePence, "travel", `${q.name} to ${venue(p.destination)!.name}`, { type: "journey", id });
   await tx.query(
@@ -718,7 +733,12 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
   const day = londonDayKey(now);
   const weather = weatherFor(day);
   const moodletRows = await activeMoodlets(tx, c, now);
-  const mood = computeMood(c.needs, ctx.home.placed.map((p) => p.defId), weather, moodletRows);
+  const arrears = (await tx.query("SELECT 1 FROM bills WHERE character_id = $1 AND status = 'unpaid' LIMIT 1", [c.id])).rowCount! > 0;
+  const mood = computeMood(c.needs, ctx.home.placed.map((p) => p.defId), weather, [
+    ...moodletRows,
+    ...(ctx.home.tier.mood ? [{ label: `Living in a ${ctx.home.tier.name.toLowerCase()}`, strength: ctx.home.tier.mood }] : []),
+    ...(arrears ? [{ label: "Unpaid rent", strength: -5 }] : []),
+  ]);
   const a = await ensureAssignment(tx, c, now);
 
   const skillRows = (await tx.query("SELECT skill_id, xp, best_level FROM skills WHERE character_id = $1", [c.id])).rows;
@@ -843,7 +863,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
       id: v.id,
       name: v.name,
       district: v.id === "home" ? ctx.home.home.district : v.district,
-      map: v.map ?? [0, 0],
+      map: v.id === "home" ? HOME_DISTRICT_POS[ctx.home.home.district] ?? [0, 0] : v.map ?? [0, 0],
       tags: v.tags ?? [],
       open: isOpenAt(v, londonHour(now)),
       hours: v.hours ?? null,
@@ -852,7 +872,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
       access: v.access,
       npcs: v.npcs,
       here: c.location === v.id,
-      quotes: c.location === v.id ? [] : modesFor(c.location, v.id).map((m) => journeyQuote(c.location, v.id, m)),
+      quotes: c.location === v.id ? [] : modesFor(c.location, v.id, HOME_DISTRICT_POS[ctx.home.home.district]).map((m) => journeyQuote(c.location, v.id, m, HOME_DISTRICT_POS[ctx.home.home.district])),
     })),
     missions: {
       day: a.day,
@@ -883,6 +903,9 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     catalogue: FURNITURE.map((f) => ({ ...f, pricePence: furniturePrice(f.pricePence, c.perks), listPence: f.pricePence })),
     moodlets: moodletRows,
     goals,
+    courses: await coursesView(tx, c, now),
+    wardrobe: await wardrobeView(tx, c),
+    ...(await economyView(tx, c, now)),
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };
   out.character.ambition.progress = goals.ambition.progress;

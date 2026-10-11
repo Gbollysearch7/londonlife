@@ -18,6 +18,7 @@ export function HotspotCard({ s }: { s: State }) {
   const pending = useGame((x) => x.pending);
   const setSheet = useGame((x) => x.setSheet);
   const setPlacement = useGame((x) => x.setPlacement);
+  const setApp = useGame((x) => x.setPhoneApp);
 
   useEffect(() => {
     if (!hotspot) return;
@@ -68,6 +69,24 @@ export function HotspotCard({ s }: { s: State }) {
           </div>
         )}
         {isGroceries && <GroceryCounter s={s} />}
+        {(hotspot.id === "anchor:vintage" || hotspot.id === "anchor:chairs" || hotspot.id === "anchor:lecture") && (
+          <div className={styles.bonus} style={{ marginTop: 0, marginBottom: 10 }}>
+            <div>
+              <strong>{hotspot.id === "anchor:vintage" ? "Clothes for sale" : hotspot.id === "anchor:chairs" ? "New hairstyle or colour" : "Courses and certificates"}</strong>
+              <span className="tiny">{hotspot.id === "anchor:vintage" ? "Try on and buy in the Wardrobe app." : hotspot.id === "anchor:chairs" ? "Preview free, pay when you book." : "Lesson notes and quizzes live in the Courses app."}</span>
+            </div>
+            <button
+              className="btn small"
+              onClick={() => {
+                close();
+                setApp(hotspot.id === "anchor:lecture" ? "courses" : "wardrobe");
+                setSheet("phone");
+              }}
+            >
+              Open
+            </button>
+          </div>
+        )}
         {!isExit && !isGroceries && actions.length === 0 && !furniture && <p className="muted">Nothing to do here right now.</p>}
         {actions.length > 0 && (
           <ul className={styles.list}>

@@ -130,7 +130,6 @@ async function friendships(tx: Tx, c: CharRow) {
   );
 }
 
-const HOME_PRICES: Record<string, number> = { student_hall: 800000, shared_room: 800000, outer_studio: 1800000, one_bed: 3600000 };
 
 async function ambitionProgress(tx: Tx, c: CharRow, friends: Awaited<ReturnType<typeof friendships>>): Promise<{ progress: number; note: string }> {
   const lv = async (skill: string) => levelForXp(Number((await tx.query("SELECT xp FROM skills WHERE character_id = $1 AND skill_id = $2", [c.id, skill])).rows[0]?.xp ?? 0));
@@ -155,7 +154,7 @@ async function ambitionProgress(tx: Tx, c: CharRow, friends: Awaited<ReturnType<
     case "home_owner": {
       const home = (await tx.query("SELECT * FROM homes WHERE character_id = $1", [c.id])).rows[0];
       if (home?.owned) return { progress: 1, note: "You own your home." };
-      const price = HOME_PRICES[home?.tier_id] ?? 800000;
+      const price = HOME_TIERS.find((t) => t.id === home?.tier_id)?.pricePence ?? HOME_TIERS.find((t) => t.id === "shared_room")!.pricePence!;
       const tier = HOME_TIERS.find((t) => t.id === home?.tier_id)?.name ?? "your home";
       return { progress: Math.min(0.95, c.cash_pence / price), note: `Saving towards ${fmtMoney(price)} to buy ${tier.toLowerCase()} (Homes app).` };
     }

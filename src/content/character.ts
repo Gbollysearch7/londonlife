@@ -24,12 +24,29 @@ export const AMBITIONS: AmbitionDef[] = [
 /** Ambitions may be changed once every 7 days (source-faithful cooldown). */
 export const AMBITION_COOLDOWN_DAYS = 7;
 
+/** Personal-home tiers (spec ch. 11, 31). Fictional balancing values, not real London property prices. */
 export const HOME_TIERS: HomeTierDef[] = [
-  { id: "student_hall", name: "Student hall room", gridW: 6, gridD: 6, district: "Camden" },
-  { id: "shared_room", name: "Room in a shared flat", gridW: 6, gridD: 6, district: "Camden" },
-  { id: "outer_studio", name: "Studio flat", gridW: 7, gridD: 7, district: "Camden" },
-  { id: "one_bed", name: "One-bedroom flat", gridW: 8, gridD: 8, district: "Camden" },
+  { id: "student_hall", name: "Student hall room", gridW: 6, gridD: 6, district: "Camden", rentPence: 5000, pricePence: null, mood: 0, blurb: "Compact, cheap and close to campus." },
+  { id: "shared_room", name: "Room in a shared flat", gridW: 6, gridD: 6, district: "Camden", rentPence: 8000, pricePence: 800000, mood: 0, blurb: "Your own room in a busy Camden flatshare." },
+  { id: "outer_studio", name: "Studio flat", gridW: 7, gridD: 7, district: "Camden", rentPence: 14000, pricePence: 1800000, mood: 2, blurb: "A whole flat to yourself, with room for a sofa." },
+  { id: "one_bed", name: "One-bedroom flat", gridW: 8, gridD: 8, district: "Camden", rentPence: 24000, pricePence: 3600000, mood: 3, blurb: "A proper bedroom and a living area that fits friends." },
+  { id: "brixton_terrace", name: "Brixton family terrace", gridW: 10, gridD: 10, district: "Brixton", rentPence: 48000, pricePence: 8500000, mood: 5, blurb: "A painted terrace near the market with space for everything." },
+  { id: "soho_townhouse", name: "Soho townhouse", gridW: 12, gridD: 12, district: "Soho", rentPence: 100000, pricePence: 22000000, mood: 7, blurb: "Tall windows, old floorboards and the West End on your doorstep." },
+  { id: "riverside_penthouse", name: "Riverside penthouse", gridW: 13, gridD: 13, district: "South Bank", rentPence: 250000, pricePence: 60000000, mood: 9, blurb: "Glass walls, a terrace and the whole skyline." },
 ];
+
+/** Where a home district sits on the city map (for journey times from home). */
+export const HOME_DISTRICT_POS: Record<string, [number, number]> = {
+  Camden: [0, 0],
+  Brixton: [2.75, 7.7],
+  Soho: [1.95, 2.75],
+  "South Bank": [3.2, 4.75],
+};
+
+/** First weeks of rent covered by the starting circumstances (spec ch. 31 "first-week rent support"). */
+export const STARTER_RENT_FREE_WEEKS = 2;
+/** Move-in: one week's rent as a refundable deposit plus two weeks' rent as a non-refundable agency fee. */
+export const MOVE_IN = { depositWeeks: 1, feeWeeks: 2 };
 
 const STARTER = ["single_bed", "toilet", "shower", "camp_hob", "fridge", "storage_chest"];
 const BASIC_GROCERIES = { bread: 2, beans: 1, pasta: 1, tomato: 1, tea: 3 };
@@ -102,10 +119,11 @@ export const ORIGINS: OriginDef[] = [
     weight: 5,
     cashPence: 250000,
     homeTier: "one_bed",
+    ownsHome: true,
     furniture: [...STARTER.filter((f) => f !== "single_bed" && f !== "camp_hob"), "double_bed", "cooker", "sofa", "tv", "rug", "lamp"],
     groceries: { ...BASIC_GROCERIES, eggs: 2, rice: 2, plantain: 2 },
     skills: {},
-    perks: ["One-bedroom flat", "Well furnished"],
+    perks: ["Owns a one-bedroom flat (no rent)", "Well furnished"],
   },
 ];
 

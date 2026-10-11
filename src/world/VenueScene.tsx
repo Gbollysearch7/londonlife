@@ -176,7 +176,7 @@ export default function VenueScene({ state, light }: { state: State; light: Ligh
       {Object.entries(layout.anchors).map(([id, a]) => {
         if (!a.label) return null;
         const actionIds = anchorActions[id] ?? [];
-        const special = id === "exit" || id === "groceries";
+        const special = id === "exit" || id === "groceries" || id === "chairs";
         if (!actionIds.length && !special) return null;
         return (
           <HotspotMarker

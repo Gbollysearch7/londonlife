@@ -3,6 +3,7 @@ import m002 from "../../db/migrations/002_careers.sql";
 import m003 from "../../db/migrations/003_minigames.sql";
 import m004 from "../../db/migrations/004_stories.sql";
 import m005 from "../../db/migrations/005_goals.sql";
+import m006 from "../../db/migrations/006_economy.sql";
 
 /** Every migration, in order. Keep in sync with db/migrations. */
 export const MIGRATIONS: [string, string][] = [
@@ -11,6 +12,7 @@ export const MIGRATIONS: [string, string][] = [
   ["003_minigames.sql", m003],
   ["004_stories.sql", m004],
   ["005_goals.sql", m005],
+  ["006_economy.sql", m006],
 ];
 
 /** PGlite has gen_random_uuid built in; the pgcrypto extension line is dropped. */

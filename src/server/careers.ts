@@ -8,6 +8,7 @@ import { applyShift, londonWeekKey, londonWeekday, planTasks, shiftOutcome, wage
 import { durationMs, londonDayKey, londonHour } from "@/sim/time";
 import { GameError, type Tx } from "./db";
 import { perkEffects } from "@/content/goals";
+import { CERT_PERF_BONUS, certifiedCareers } from "./courses";
 import { addXp, emit, fmtMoney, loadCtx, moveMoney, requireCharacter, saveNeeds, type CharRow, type Ctx } from "./game";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -178,7 +179,10 @@ async function settleShift(tx: Tx, c: CharRow, row: Record<string, any>, end: Da
   const msPerMinute = (new Date(row.ends_at).getTime() - startedAt.getTime()) / SHIFT.minutes;
   const o = shiftOutcome({ shiftId: row.id, salaryPence: Number(row.salary_pence), marks: row.styles, tasks: row.tasks, startedAt, end, msPerMinute });
   // Go-Getter perk: performance gains (not losses) count 25% more.
-  if (o.perfDelta > 0) o.perfDelta = Math.round(o.perfDelta * perkEffects(c.perks).workPerf);
+  if (o.perfDelta > 0) {
+    const cert = (await certifiedCareers(tx, c.id)).some((k) => k === career.id) ? CERT_PERF_BONUS : 1;
+    o.perfDelta = Math.round(o.perfDelta * perkEffects(c.perks).workPerf * cert);
+  }
 
   const earned = await tx.query(
     "SELECT COALESCE(SUM(gross_pence), 0) AS g FROM shifts WHERE character_id = $1 AND week_key = $2 AND id <> $3 AND settled_at IS NOT NULL",

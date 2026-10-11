@@ -247,3 +247,15 @@
 @keyframes pulseBox { 50% { box-shadow: 0 0 0 4px rgba(198,156,88,.3); } }
 .moodlets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 @media (max-width: 760px) { .streak { grid-template-columns: repeat(4, 1fr); } }
+
+/* economy */
+.previewBox { height: 240px; border-radius: 14px; overflow: hidden; background: #e9dfcf; margin-bottom: 6px; }
+.swatchRow { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 8px; margin: 6px 0; }
+.courseHead { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; text-align: left; background: none; border: 0; padding: 0; width: 100%; }
+.courseHead > div { display: grid; gap: 2px; }
+.lessons { margin: 4px 0 0; padding-left: 0; list-style: none; display: grid; gap: 8px; }
+.lessons li { border-left: 3px solid var(--line); padding-left: 10px; }
+.lessonDone { border-left-color: var(--green) !important; }
+.quizField { border: 0; padding: 0; margin: 4px 0; display: grid; gap: 4px; }
+.quizField legend { font-weight: 600; margin-bottom: 4px; font-size: 14px; }
+.quizOpt { display: flex; gap: 8px; align-items: center; font-size: 14px; padding: 6px 8px; border-radius: 8px; background: var(--ivory); cursor: pointer; }

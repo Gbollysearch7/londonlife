@@ -61,6 +61,8 @@ export interface OriginDef {
   groceries: Record<string, number>;
   skills: Partial<Record<SkillId, number>>;
   perks: string[];
+  /** Starts out owning the home (no rent). */
+  ownsHome?: boolean;
 }
 
 export interface HomeTierDef {
@@ -69,6 +71,13 @@ export interface HomeTierDef {
   gridW: number;
   gridD: number;
   district: string;
+  /** Weekly rent in pence (fictional). */
+  rentPence: number;
+  /** Residential purchase price in pence; null when the home can't be bought. */
+  pricePence: number | null;
+  /** Flat mood bonus for living here (better homes feel better). */
+  mood: number;
+  blurb: string;
 }
 
 export type Surface = "floor" | "overlay" | "wall";

@@ -4,6 +4,9 @@ import * as careers from "./careers";
 import * as minigames from "./minigames";
 import * as stories from "./stories";
 import * as goals from "./goals";
+import * as economy from "./economy";
+import * as courses from "./courses";
+import * as wardrobe from "./wardrobe";
 
 type Handler = (tx: Tx, accountId: string, payload: never, now: Date) => Promise<{ message: string } | { created: boolean }>;
 
@@ -35,6 +38,15 @@ const HANDLERS: Record<string, Handler> = {
   BuyPerk: goals.buyPerk as Handler,
   ClaimAmbition: goals.claimAmbition as Handler,
   ChangeAmbition: goals.changeAmbition as Handler,
+  DepositSavings: economy.depositSavings as Handler,
+  WithdrawSavings: economy.withdrawSavings as Handler,
+  PayBills: economy.payBills as Handler,
+  MoveHome: economy.moveHome as Handler,
+  BuyHome: economy.buyHome as Handler,
+  SubmitLessonQuiz: courses.submitLessonQuiz as Handler,
+  BuyGarment: wardrobe.buyGarment as Handler,
+  EquipOutfit: wardrobe.equipOutfit as Handler,
+  ChangeHair: wardrobe.changeHair as Handler,
 };
 
 export interface CommandResult {

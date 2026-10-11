@@ -1,5 +1,6 @@
 import { ITEMS, RECIPES } from "./catalogue";
 import { CITY_ACTIVITIES, CITY_VENUES } from "./city";
+import { COURSES } from "./courses";
 import type { ActivityDef, LocationId, MissionDef, VenueDef } from "./types";
 
 export const VENUES: VenueDef[] = [
@@ -80,22 +81,26 @@ export const TRAVEL_MODES = {
 } as const;
 export type TravelMode = keyof typeof TRAVEL_MODES;
 
-export function mapPos(id: LocationId): [number, number] {
-  return venue(id)?.map ?? [0, 0];
+/** Map position of a place; "home" sits wherever the character's home district is. */
+export function mapPos(id: LocationId, homeAt: [number, number] = [0, 0]): [number, number] {
+  return id === "home" ? homeAt : venue(id)?.map ?? [0, 0];
 }
 
-export function walkMinutes(a: LocationId, b: LocationId): number {
+const isCamdenHome = (h: [number, number]) => h[0] === 0 && h[1] === 0;
+
+export function walkMinutes(a: LocationId, b: LocationId, homeAt: [number, number] = [0, 0]): number {
   if (a === b) return 0;
-  const authored = WALK[`${a}|${b}`] ?? WALK[`${b}|${a}`];
+  // Authored Camden times apply to home only while home is in Camden.
+  const authored = (a !== "home" && b !== "home") || isCamdenHome(homeAt) ? WALK[`${a}|${b}`] ?? WALK[`${b}|${a}`] : undefined;
   if (authored) return authored;
-  const [ax, ay] = mapPos(a);
-  const [bx, by] = mapPos(b);
+  const [ax, ay] = mapPos(a, homeAt);
+  const [bx, by] = mapPos(b, homeAt);
   return Math.max(2, Math.round(Math.hypot(ax - bx, ay - by) * MINUTES_PER_UNIT));
 }
 
 /** The Tube only serves trips between districts; short hops are walk or bus. Taxis go anywhere. */
-export function modesFor(a: LocationId, b: LocationId): TravelMode[] {
-  return walkMinutes(a, b) >= 20 ? ["walk", "bus", "tube", "taxi"] : ["walk", "bus", "taxi"];
+export function modesFor(a: LocationId, b: LocationId, homeAt: [number, number] = [0, 0]): TravelMode[] {
+  return walkMinutes(a, b, homeAt) >= 20 ? ["walk", "bus", "tube", "taxi"] : ["walk", "bus", "taxi"];
 }
 
 /** Taxi fare: £4 flag plus £1 per walking-equivalent five minutes (fictional). */
@@ -103,9 +108,9 @@ export function taxiFare(walk: number) {
   return 400 + Math.ceil(walk / 5) * 100;
 }
 
-export function journeyQuote(a: LocationId, b: LocationId, mode: TravelMode) {
+export function journeyQuote(a: LocationId, b: LocationId, mode: TravelMode, homeAt: [number, number] = [0, 0]) {
   const m = TRAVEL_MODES[mode];
-  const walk = walkMinutes(a, b);
+  const walk = walkMinutes(a, b, homeAt);
   const minutes = Math.max(m.minMinutes, Math.round(walk * m.speed));
   return { mode, name: m.name, farePence: mode === "taxi" ? taxiFare(walk) : m.farePence, minutes };
 }
@@ -140,6 +145,24 @@ const cookActivities: ActivityDef[] = RECIPES.map((r) => ({
   cancelRule: "Ingredients are used as soon as you start and are not returned if you cancel.",
   event: "cooked",
   anchor: "hob",
+}));
+
+/** Daily cap on new classes, shared across all courses (source-observed two per day). */
+export const CLASSES_PER_DAY = 2;
+
+const classActivities: ActivityDef[] = COURSES.map((c) => ({
+  id: `class_${c.id}`,
+  label: `Attend class: ${c.name}`,
+  description: `${c.blurb} After class there's a short quiz; pass it to unlock the next lesson.`,
+  location: "learning_campus",
+  minutes: 45,
+  costPence: c.feePence,
+  needs: { energy: -8, fun: -4, social: 4 },
+  xp: { skill: c.skill, amount: 15 },
+  cancelRule: "The class fee isn't refunded, and leaving early doesn't unlock the quiz.",
+  event: "class_attended",
+  eventData: { course: c.id },
+  anchor: "lecture",
 }));
 
 const eatActivities: ActivityDef[] = ITEMS.filter((i) => i.kind === "meal").map((m) => ({
@@ -192,6 +215,7 @@ export const ACTIVITIES: ActivityDef[] = [
   { id: "chat_priya", label: "Chat with Priya", description: "Priya is an NPC: a named local character, not another player.", location: "city_office", minutes: 2, costPence: 0, needs: { social: 12 }, xp: { skill: "charisma", amount: 4 }, cooldownMin: 30, cancelRule: NO_REFUND, event: "npc_chat", eventData: { npc: "priya" }, npc: "priya", anchor: "reception" },
   { id: "office_toilet", label: "Use the toilets", description: "", location: "city_office", minutes: 1, costPence: 0, needs: { bladder: 65 }, cancelRule: NO_REFUND, event: "toilet", anchor: "wc" },
   ...CITY_ACTIVITIES,
+  ...classActivities,
   { id: "rest_sofa", label: "Rest on the old sofa", description: "Free, if a little lumpy.", location: "common_room", minutes: 10, costPence: 0, needs: { energy: 18 }, cancelRule: NO_REFUND, event: "napped", anchor: "sofa" },
 ];
 

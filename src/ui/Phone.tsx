@@ -7,6 +7,7 @@ import Sheet from "./Sheet";
 import { money } from "./format";
 import { StoriesApp, TreasureApp } from "./Stories";
 import { GoalsApp, PeopleApp, PerksApp } from "./Goals";
+import { BankApp, CoursesApp, HomesApp, WardrobeApp } from "./Economy";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
@@ -18,6 +19,9 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "people", name: "People", icon: "☺" },
   { id: "missions", name: "Missions", icon: "✓" },
   { id: "bank", name: "Bank", icon: "£" },
+  { id: "homes", name: "Homes", icon: "⌂" },
+  { id: "courses", name: "Courses", icon: "✎" },
+  { id: "wardrobe", name: "Wardrobe", icon: "♦" },
   { id: "skills", name: "Skills", icon: "↑" },
   { id: "profile", name: "Profile", icon: "☺" },
   { id: "inventory", name: "Kitchen", icon: "◫" },
@@ -28,13 +32,10 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
 ];
 
 const LATER: { name: string; when: string }[] = [
-  { name: "Courses", when: "Milestone 2" },
-  { name: "Food delivery", when: "Milestone 2" },
-  { name: "Wardrobe", when: "Milestone 2" },
-  { name: "Homes", when: "Milestone 2" },
-  { name: "Vehicles", when: "Milestone 2" },
-  { name: "Health", when: "Milestone 2" },
-  { name: "Staff", when: "Milestone 2" },
+  { name: "Food delivery", when: "Milestone 2 (next)" },
+  { name: "Vehicles", when: "Milestone 5" },
+  { name: "Health", when: "Milestone 2 (next)" },
+  { name: "Staff", when: "Milestone 2 (next)" },
   { name: "Messages", when: "Milestone 3" },
   { name: "Contacts", when: "Milestone 3" },
   { name: "Invitations", when: "Milestone 3" },
@@ -64,6 +65,9 @@ const TITLES: Record<string, string> = {
   inventory: "Kitchen cupboard",
   tour: "Your first twenty minutes",
   stories: "Stories",
+  homes: "Homes",
+  courses: "Courses",
+  wardrobe: "Wardrobe",
   goals: "Goals",
   perks: "Perks",
   people: "People",
@@ -94,7 +98,11 @@ export function PhoneSheet({ s }: { s: State }) {
               const badge =
                 a.id === "missions"
                   ? s.missions.items.filter((m) => m.claimable).length + (s.missions.bonus.claimable ? 1 : 0)
-                  : a.id === "goals"
+                  : a.id === "courses"
+                    ? s.courses.list.filter((c) => c.quiz).length
+                    : a.id === "bank"
+                      ? s.bank.unpaidCount
+                      : a.id === "goals"
                     ? s.goals.wishes.filter((w) => w.claimable).length + s.goals.ambition.milestones.filter((m) => m.claimable).length
                     : a.id === "stories"
                     ? Number(!!s.stories.active?.here)
@@ -137,7 +145,10 @@ export function PhoneSheet({ s }: { s: State }) {
       {current === "treasure" && <TreasureApp s={s} />}
       {current === "jobs" && <Jobs s={s} />}
       {current === "missions" && <Missions s={s} />}
-      {current === "bank" && <Bank s={s} />}
+      {current === "bank" && <BankApp s={s} />}
+      {current === "homes" && <HomesApp s={s} />}
+      {current === "courses" && <CoursesApp s={s} />}
+      {current === "wardrobe" && <WardrobeApp s={s} />}
       {current === "skills" && <Skills s={s} />}
       {current === "profile" && <Profile s={s} />}
       {current === "inventory" && <Inventory s={s} />}
@@ -326,38 +337,6 @@ function Missions({ s }: { s: State }) {
           </button>
         )}
       </div>
-    </>
-  );
-}
-
-function Bank({ s }: { s: State }) {
-  return (
-    <>
-      <div className={styles.balance}>
-        <span className="tiny">Cash</span>
-        <strong>{money(s.wallet.cashPence)}</strong>
-      </div>
-      <p className="tiny">Savings, bonds, bills and tax arrive in Milestone 2. Every change to your money is recorded below.</p>
-      <h3 className={styles.subhead}>Money history</h3>
-      <ul className={styles.ledger}>
-        {s.ledger.map((l) => (
-          <li key={l.id}>
-            <div>
-              <strong>{l.description}</strong>
-              <span className="tiny">
-                {new Date(l.at).toLocaleString("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {l.category}
-              </span>
-            </div>
-            <div className={styles.ledgerAmt}>
-              <span className={l.amountPence < 0 ? styles.neg : styles.pos}>
-                {l.amountPence > 0 ? "+" : ""}
-                {money(l.amountPence)}
-              </span>
-              <span className="tiny">{money(l.balanceAfter)}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
     </>
   );
 }
