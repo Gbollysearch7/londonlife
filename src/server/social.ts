@@ -1,4 +1,5 @@
 import { HOME_TIERS, type Appearance } from "@/content/character";
+import { valuationKeys } from "@/content/property";
 import { careerDef, roleTitle } from "@/content/careers";
 import { courseDef } from "@/content/courses";
 import { storyDef, storyNode } from "@/content/stories";
@@ -524,16 +525,19 @@ export async function reportPlayer(tx: Tx, accountId: string, p: { characterId: 
 
 // ───────────────────────────── public values ─────────────────────────────
 
-const TIER_PRICES = () => JSON.stringify(Object.fromEntries(HOME_TIERS.map((t) => [t.id, t.pricePence ?? 0])));
+const TIER_PRICES = (now = new Date()) => JSON.stringify({ ...Object.fromEntries(HOME_TIERS.map((t) => [t.id, t.pricePence ?? 0])), ...valuationKeys(now) });
 
 /**
  * Net worth exactly as the Bank app shows it: cash + savings + half the furniture paid
- * + the owned home's price (or the rent deposit held) − unpaid bills. One SQL definition serves
+ * + the owned home's price (or the rent deposit held) − unpaid bills + investment homes and land at this
+ * week's valuation (plus half the building work paid in). One SQL definition serves
  * profiles and rankings, so the two always agree.
  */
 const NET_WORTH_SQL = `(c.cash_pence + c.savings_pence + (COALESCE(f.s, 0)::bigint + 1) / 2
   + CASE WHEN h.owned THEN COALESCE((($1::jsonb) ->> h.tier_id)::bigint, 0) ELSE COALESCE(h.deposit_pence, 0) END
-  - COALESCE(bl.s, 0)::bigint)`;
+  - COALESCE(bl.s, 0)::bigint
+  + COALESCE((SELECT SUM(COALESCE((($1::jsonb) ->> ('inv:' || ip.def_id))::bigint, 0)) FROM investment_properties ip WHERE ip.character_id = c.id AND ip.status = 'owned'), 0)::bigint
+  + COALESCE((SELECT SUM(COALESCE((($1::jsonb) ->> ('plot:' || lp.def_id))::bigint, 0) + (lp.spent_pence + 1) / 2) FROM land_plots lp WHERE lp.character_id = c.id AND lp.status = 'owned'), 0)::bigint)`;
 const NET_WORTH_JOINS = `LEFT JOIN homes h ON h.character_id = c.id
   LEFT JOIN (SELECT character_id, SUM(price_pence) AS s FROM furniture GROUP BY character_id) f ON f.character_id = c.id
   LEFT JOIN (SELECT character_id, SUM(amount_pence) AS s FROM bills WHERE status = 'unpaid' GROUP BY character_id) bl ON bl.character_id = c.id`;
@@ -542,7 +546,7 @@ async function publicProfile(tx: Tx, viewer: CharRow, id: string, now: Date) {
   const r = await tx.query(
     `SELECT c.id, c.name, c.appearance, c.reputation_xp, c.ambition, h.tier_id, h.district, h.owned, p.last_active_at, ${NET_WORTH_SQL} AS net_worth
      FROM characters c ${NET_WORTH_JOINS} LEFT JOIN social_profiles p ON p.character_id = c.id WHERE c.id = $2`,
-    [TIER_PRICES(), id],
+    [TIER_PRICES(now), id],
   );
   const row = r.rows[0];
   if (!row) throw new GameError("no_player", "That player couldn't be found.");
@@ -613,7 +617,7 @@ async function rankings(tx: Tx, viewer: CharRow, now: Date) {
     return { top: rows.filter((x) => x.rank <= RANKING_SIZE), you: rows.find((x) => x.you) ?? null };
   };
   const rep = await board("c.reputation_xp", []);
-  const worth = await board(NET_WORTH_SQL, [TIER_PRICES()]);
+  const worth = await board(NET_WORTH_SQL, [TIER_PRICES(now)]);
   return {
     updatedAt: now.toISOString(),
     reputation: { ...rep, top: rep.top.map((x) => ({ ...x, title: reputation(x.value).title })) },

@@ -13,6 +13,7 @@ import { FeedApp, MessagesApp, PeopleHub, PrivacySettings, RankingsApp } from ".
 import { BoardApp, CompanyApp, MarketApp } from "./Market";
 import { GamesApp, GovernmentApp } from "./Games";
 import { InsuranceApp, PetsApp, VehiclesApp, lateBadge } from "./LateGame";
+import { InvestApp } from "./Invest";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
@@ -40,6 +41,7 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "vehicles", name: "Vehicles", icon: "◎" },
   { id: "insurance", name: "Insurance", icon: "☂" },
   { id: "pets", name: "Pets", icon: "♥" },
+  { id: "invest", name: "Invest", icon: "▦" },
   { id: "skills", name: "Skills", icon: "↑" },
   { id: "profile", name: "Profile", icon: "☺" },
   { id: "inventory", name: "Kitchen", icon: "◫" },
@@ -60,7 +62,6 @@ const LATER: { name: string; when: string }[] = [
   { name: "Company", when: "Milestone 3" },
   { name: "Rankings", when: "Milestone 3" },
   { name: "Shops", when: "Milestone 3" },
-  { name: "Investments", when: "Milestone 3" },
   { name: "Games", when: "Milestone 4" },
   { name: "Government", when: "Milestone 4" },
   { name: "City feed", when: "Milestone 3" },
@@ -93,6 +94,7 @@ const TITLES: Record<string, string> = {
   vehicles: "Vehicles",
   insurance: "Insurance",
   pets: "Pets",
+  invest: "Invest",
   goals: "Goals",
   perks: "Perks",
   people: "People",
@@ -196,6 +198,7 @@ export function PhoneSheet({ s }: { s: State }) {
       {current === "vehicles" && <VehiclesApp s={s} />}
       {current === "insurance" && <InsuranceApp s={s} />}
       {current === "pets" && <PetsApp s={s} />}
+      {current === "invest" && <InvestApp s={s} />}
       {current === "skills" && <Skills s={s} />}
       {current === "profile" && <Profile s={s} />}
       {current === "inventory" && <Inventory s={s} />}
