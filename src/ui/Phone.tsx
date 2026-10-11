@@ -8,6 +8,7 @@ import { money } from "./format";
 import { StoriesApp, TreasureApp } from "./Stories";
 import { GoalsApp, PeopleApp, PerksApp } from "./Goals";
 import { BankApp, CoursesApp, FoodApp, HomesApp, WardrobeApp } from "./Economy";
+import { GamesApp, GovernmentApp } from "./Games";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
@@ -23,6 +24,8 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "courses", name: "Courses", icon: "✎" },
   { id: "wardrobe", name: "Wardrobe", icon: "♦" },
   { id: "food", name: "Food", icon: "◐" },
+  { id: "games", name: "Games", icon: "◉" },
+  { id: "government", name: "Government", icon: "⚑" },
   { id: "skills", name: "Skills", icon: "↑" },
   { id: "profile", name: "Profile", icon: "☺" },
   { id: "inventory", name: "Kitchen", icon: "◫" },
@@ -45,8 +48,6 @@ const LATER: { name: string; when: string }[] = [
   { name: "Shops", when: "Milestone 3" },
   { name: "Investments", when: "Milestone 3" },
   { name: "City feed", when: "Milestone 3" },
-  { name: "Games", when: "Milestone 4" },
-  { name: "Government", when: "Milestone 4" },
   { name: "Police", when: "Milestone 4" },
   { name: "Court", when: "Milestone 4" },
   { name: "Insurance", when: "Milestone 5" },
@@ -68,6 +69,8 @@ const TITLES: Record<string, string> = {
   courses: "Courses",
   wardrobe: "Wardrobe",
   food: "Food delivery",
+  games: "Games",
+  government: "City government",
   goals: "Goals",
   perks: "Perks",
   people: "People",
@@ -150,6 +153,8 @@ export function PhoneSheet({ s }: { s: State }) {
       {current === "courses" && <CoursesApp s={s} />}
       {current === "wardrobe" && <WardrobeApp s={s} />}
       {current === "food" && <FoodApp s={s} />}
+      {current === "games" && <GamesApp s={s} />}
+      {current === "government" && <GovernmentApp s={s} />}
       {current === "skills" && <Skills s={s} />}
       {current === "profile" && <Profile s={s} />}
       {current === "inventory" && <Inventory s={s} />}
