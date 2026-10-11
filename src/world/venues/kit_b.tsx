@@ -239,6 +239,22 @@ export function PropB({ s, night }: { s: PropSpec; night: boolean }) {
         </group>
       );
     }
+    case "game_table":
+      // A square pub table with a stool each side; the live board on top is drawn by world/LiveGameTable.tsx.
+      return (
+        <group>
+          <B p={[0, 0.72, 0]} s={[0.9, 0.05, 0.9]} c={c ?? "#4a3220"} r={0.6} />
+          <B p={[0, 0.36, 0]} s={[0.12, 0.7, 0.12]} c={INK} m={0.4} />
+          <B p={[0, 0.02, 0]} s={[0.6, 0.04, 0.6]} c={INK} m={0.4} />
+          {[-0.75, 0.75].map((x) => (
+            <group key={x} position={[x, 0, 0]}>
+              <Cyl p={[0, 0.5, 0]} a={[0.19, 0.19, 0.06, 14]} c="#5a1e24" r={0.6} />
+              <Cyl p={[0, 0.25, 0]} a={[0.03, 0.04, 0.5, 6]} c={INK} m={0.5} />
+              <Cyl p={[0, 0.02, 0]} a={[0.15, 0.15, 0.03, 12]} c={INK} m={0.5} />
+            </group>
+          ))}
+        </group>
+      );
     default:
       return null;
   }

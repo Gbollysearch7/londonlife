@@ -12,6 +12,7 @@ import { StaffApp } from "./Household";
 import { FeedApp, MessagesApp, PeopleHub, PrivacySettings, RankingsApp } from "./Social";
 import { BoardApp, CompanyApp, MarketApp } from "./Market";
 import { GamesApp, GovernmentApp } from "./Games";
+import { LadderBadges } from "./Ladder";
 import { InsuranceApp, PetsApp, VehiclesApp, lateBadge } from "./LateGame";
 import styles from "./ui.module.css";
 
@@ -441,6 +442,7 @@ function Profile({ s }: { s: State }) {
           )}
         </p>
       </section>
+      <LadderBadges s={s} />
       <section className={styles.group}>
         <h3>Ambition: {c.ambition.name}</h3>
         <p className="muted">{c.ambition.blurb}</p>

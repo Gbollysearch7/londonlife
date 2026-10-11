@@ -1,0 +1,30 @@
+/* Draughts board overlay. Class names are prefixed "dr" to stay unique across CSS modules. */
+.drBoard { display: grid; grid-template-columns: repeat(8, 1fr); border-radius: 12px; overflow: hidden; border: 6px solid #5a3a26; box-shadow: 0 6px 18px rgba(23,35,43,.25); outline-offset: 3px; touch-action: manipulation; aspect-ratio: 1; width: min(100%, 440px); justify-self: center; }
+.drSq { position: relative; display: grid; place-items: center; aspect-ratio: 1; border: 0; padding: 0; background: #ead9bd; }
+.drDark { background: #6f8f6a; }
+.drDark:disabled { cursor: default; }
+.drCursor { box-shadow: inset 0 0 0 3px #fff; }
+.drFrom { background: #b68d3c; }
+.drTarget::after { content: ""; position: absolute; width: 30%; height: 30%; border-radius: 50%; background: rgba(255,255,255,.75); box-shadow: 0 0 0 2px rgba(23,35,43,.3); }
+.drMovable { box-shadow: inset 0 0 0 3px rgba(255, 233, 160, .9); }
+.drLast { background: #8aa66f; }
+.drPiece { width: 76%; height: 76%; border-radius: 50%; display: grid; place-items: center; font-size: 14px; line-height: 1; box-shadow: inset 0 -4px 0 rgba(0,0,0,.25), 0 2px 3px rgba(0,0,0,.35); transition: transform .15s; }
+.drPieceDark { background: radial-gradient(circle at 35% 30%, #4a4f57, #1d2127); color: #e2b04a; }
+.drPieceLight { background: radial-gradient(circle at 35% 30%, #fff8ea, #d9c7a6); color: #8a5a1a; }
+.drSel { transform: translateY(-3px) scale(1.06); box-shadow: 0 0 0 3px #fff, 0 6px 10px rgba(0,0,0,.35); }
+.drDot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+.drHint { margin: 0; font-size: 13px; color: var(--ink-2); }
+.drPicker { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 8px; }
+.drPick { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 14px; font-weight: 600; }
+.drPickOn { border-color: var(--green); background: #eef5f1; box-shadow: inset 0 0 0 1px var(--green); }
+.drBadge { display: inline-flex; align-items: center; gap: 6px; background: #fff6df; border: 1px solid #e2c06a; color: #6b4a12; border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 600; }
+.drBadges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.drTable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.drTable th { text-align: left; font-size: 12px; color: var(--ink-2); font-weight: 600; padding: 4px 6px; }
+.drTable td { padding: 6px; border-top: 1px solid var(--line); }
+.drTable td:last-child, .drTable th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.drYou { background: #eef5f1; font-weight: 700; }
+@media (max-width: 420px) {
+  .drBoard { border-width: 4px; }
+  .drPiece { font-size: 11px; }
+}
