@@ -49,6 +49,9 @@ export const ITEMS: ItemDef[] = [
   { id: "jacket_potato", name: "Jacket potato with cheese", kind: "meal", eat: { hunger: 42, fun: 4, energy: 3 } },
   { id: "chickpea_curry", name: "Chickpea curry with rice", kind: "meal", eat: { hunger: 52, fun: 8 } },
   { id: "stuffed_peppers", name: "Stuffed peppers", kind: "meal", eat: { hunger: 46, fun: 10, energy: 4 } },
+  { id: "takeaway_curry", name: "Takeaway curry", kind: "meal", eat: { hunger: 45, fun: 8 } },
+  { id: "takeaway_noodles", name: "Takeaway noodles", kind: "meal", eat: { hunger: 40, fun: 6 } },
+  { id: "takeaway_pizza", name: "Takeaway pizza", kind: "meal", eat: { hunger: 50, fun: 10 } },
 ];
 
 export const RECIPES: RecipeDef[] = [

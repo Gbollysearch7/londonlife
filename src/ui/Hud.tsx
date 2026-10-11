@@ -202,6 +202,20 @@ export function Toasts() {
 
 export function Warnings({ s }: { s: State }) {
   const setSheet = useGame((x) => x.setSheet);
+  const setMapFocus = useGame((x) => x.setMapFocus);
+  if (s.health)
+    return (
+      <button
+        className={styles.warning}
+        onClick={() => {
+          setMapFocus("borough_health");
+          setSheet("map");
+        }}
+      >
+        <strong>You're {s.health.label.toLowerCase()}.</strong> See the nurse at the Borough Health Centre (free), buy a remedy, or rest — it passes by{" "}
+        {new Date(s.health.clearsAt).toLocaleString("en-GB", { timeZone: "Europe/London", weekday: "short", hour: "2-digit", minute: "2-digit" })}.
+      </button>
+    );
   if (!s.warnings.length) return null;
   const w = s.warnings[0];
   return (

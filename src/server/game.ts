@@ -16,6 +16,7 @@ import { storyView, treasureView } from "./stories";
 import { activeMoodlets, goalsView, grantMoodlet } from "./goals";
 import { economyView, settleEconomy } from "./economy";
 import { wardrobeView } from "./wardrobe";
+import { conditionDecay, healthView, setCondition, settleDeliveries, settleHealth } from "./health";
 import { classAttended, classBlocker, classesToday, courseRows, coursesView, type CourseRow } from "./courses";
 import { moodletForActivity, perkEffects } from "@/content/goals";
 
@@ -38,6 +39,8 @@ export interface CharRow {
   created_at: Date;
   /** Owned perk ids (loaded with the character). */
   perks: string[];
+  condition: string | null;
+  condition_since: Date | null;
 }
 
 function toChar(r: Record<string, unknown>): CharRow {
@@ -59,6 +62,8 @@ function toChar(r: Record<string, unknown>): CharRow {
     needs_settled_at: r.needs_settled_at as Date,
     created_at: r.created_at as Date,
     perks: [],
+    condition: (r.condition as string | null) ?? null,
+    condition_since: (r.condition_since as Date | null) ?? null,
   };
 }
 
@@ -203,7 +208,9 @@ function activityMinutes(def: ActivityDef, home: HomeCtx) {
  * Safe to run on every request; each step is conditional on persisted status, so nothing settles twice.
  */
 export async function settle(tx: Tx, c: CharRow, now: Date) {
-  const result = settleNeeds({ needs: c.needs, settledAt: c.needs_settled_at, now, traits: c.traits, createdAt: c.created_at, perkDecay: perkEffects(c.perks).decay });
+  const perkDecay = { ...perkEffects(c.perks).decay };
+  if (c.condition) perkDecay.energy = (perkDecay.energy ?? 1) * conditionDecay(c);
+  const result = settleNeeds({ needs: c.needs, settledAt: c.needs_settled_at, now, traits: c.traits, createdAt: c.created_at, perkDecay });
   c.needs = result.needs;
   const notices: string[] = [];
   if (c.needs.bladder <= 0) {
@@ -212,6 +219,8 @@ export async function settle(tx: Tx, c: CharRow, now: Date) {
     await emit(tx, c.id, "accident", {}, now);
   }
   await saveNeeds(tx, c, now);
+  notices.push(...(await settleHealth(tx, c, now)));
+  notices.push(...(await settleDeliveries(tx, c, now)));
 
   const due = await tx.query(
     "SELECT * FROM activities WHERE character_id = $1 AND status = 'running' AND ends_at <= $2",
@@ -310,6 +319,10 @@ export async function completeActivity(tx: Tx, c: CharRow, row: Record<string, u
   }
   await emit(tx, c.id, def.event, { ...(def.eventData ?? {}), activity: def.id }, now);
   if (def.npc) await emit(tx, c.id, "npc_time", { npc: def.npc }, now);
+  if (def.event === "treated" && c.condition) {
+    await setCondition(tx, c, null, now);
+    parts.push("you're feeling better");
+  }
   if (def.event === "class_attended" && def.eventData?.course) {
     await classAttended(tx, c, def.eventData.course);
     parts.push("lesson quiz unlocked");
@@ -402,6 +415,8 @@ export function activityBlocker(def: ActivityDef, ctx: Ctx): string | null {
   for (const [item, qty] of Object.entries(def.consumes ?? {})) {
     if ((ctx.inv[item] ?? 0) < qty) return `Needs ${qty} × ${itemDef(item)?.name}.`;
   }
+  if (def.requiresCondition && !c.condition) return "You're feeling fine — nothing to treat.";
+  if (c.condition && def.minEnergy) return "You're run down. Rest or see the nurse before anything strenuous.";
   const course = classBlocker(def, ctx.courses, ctx.classesToday);
   if (course) return course;
   if (def.costPence > c.cash_pence) return `Costs ${fmtMoney(def.costPence)}; you have ${fmtMoney(c.cash_pence)}.`;
@@ -738,6 +753,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     ...moodletRows,
     ...(ctx.home.tier.mood ? [{ label: `Living in a ${ctx.home.tier.name.toLowerCase()}`, strength: ctx.home.tier.mood }] : []),
     ...(arrears ? [{ label: "Unpaid rent", strength: -5 }] : []),
+    ...(c.condition ? [{ label: "Feeling run down", strength: -8 }] : []),
   ]);
   const a = await ensureAssignment(tx, c, now);
 
@@ -905,6 +921,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     goals,
     courses: await coursesView(tx, c, now),
     wardrobe: await wardrobeView(tx, c),
+    ...(await healthView(tx, c)),
     ...(await economyView(tx, c, now)),
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };

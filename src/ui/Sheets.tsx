@@ -282,6 +282,11 @@ export function NeedsSheet({ s }: { s: State }) {
         <h3>
           Mood: {s.mood.label} ({s.mood.score})
         </h3>
+        {s.health && (
+          <p className={styles.reason}>
+            {s.health.label}: {s.health.blurb}
+          </p>
+        )}
         {s.moodlets.length > 0 && (
           <div className={styles.moodlets}>
             {s.moodlets.map((m) => (

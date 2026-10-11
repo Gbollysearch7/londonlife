@@ -7,7 +7,7 @@ import Sheet from "./Sheet";
 import { money } from "./format";
 import { StoriesApp, TreasureApp } from "./Stories";
 import { GoalsApp, PeopleApp, PerksApp } from "./Goals";
-import { BankApp, CoursesApp, HomesApp, WardrobeApp } from "./Economy";
+import { BankApp, CoursesApp, FoodApp, HomesApp, WardrobeApp } from "./Economy";
 import styles from "./ui.module.css";
 
 const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon: string }[] = [
@@ -22,6 +22,7 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "homes", name: "Homes", icon: "⌂" },
   { id: "courses", name: "Courses", icon: "✎" },
   { id: "wardrobe", name: "Wardrobe", icon: "♦" },
+  { id: "food", name: "Food", icon: "◐" },
   { id: "skills", name: "Skills", icon: "↑" },
   { id: "profile", name: "Profile", icon: "☺" },
   { id: "inventory", name: "Kitchen", icon: "◫" },
@@ -32,9 +33,7 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
 ];
 
 const LATER: { name: string; when: string }[] = [
-  { name: "Food delivery", when: "Milestone 2 (next)" },
   { name: "Vehicles", when: "Milestone 5" },
-  { name: "Health", when: "Milestone 2 (next)" },
   { name: "Staff", when: "Milestone 2 (next)" },
   { name: "Messages", when: "Milestone 3" },
   { name: "Contacts", when: "Milestone 3" },
@@ -68,6 +67,7 @@ const TITLES: Record<string, string> = {
   homes: "Homes",
   courses: "Courses",
   wardrobe: "Wardrobe",
+  food: "Food delivery",
   goals: "Goals",
   perks: "Perks",
   people: "People",
@@ -149,6 +149,7 @@ export function PhoneSheet({ s }: { s: State }) {
       {current === "homes" && <HomesApp s={s} />}
       {current === "courses" && <CoursesApp s={s} />}
       {current === "wardrobe" && <WardrobeApp s={s} />}
+      {current === "food" && <FoodApp s={s} />}
       {current === "skills" && <Skills s={s} />}
       {current === "profile" && <Profile s={s} />}
       {current === "inventory" && <Inventory s={s} />}

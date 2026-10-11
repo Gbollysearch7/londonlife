@@ -84,7 +84,7 @@ export const NEED_CONSEQUENCES: Record<NeedId, string> = {
 
 export const NEED_RECOVERY: Record<NeedId, string> = {
   hunger: "Eat a meal at home or the Food Hall; the Common Room serves a free meal daily.",
-  energy: "Sleep or nap at home, or rest on the Common Room sofa.",
+  energy: "Sleep or nap at home, or rest on the Common Room sofa. If you're run down, the Borough Health Centre can help for free.",
   fun: "Watch TV, put your feet up, or practise a hobby.",
   social: "Chat with Nia or Bev, or volunteer at the Common Room.",
   hygiene: "Shower at home, or use the free shower at the Common Room.",

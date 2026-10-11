@@ -30,7 +30,8 @@ export type LocationId =
   | "south_bank"
   | "borough_market"
   | "borough_athletics"
-  | "crown_and_curl";
+  | "crown_and_curl"
+  | "borough_health";
 
 export interface TraitDef {
   id: string;
@@ -152,6 +153,8 @@ export interface ActivityDef {
   anchor?: string;
   /** London hours [from, to) when this can start; `to` may exceed 24 for after midnight. */
   hours?: [number, number];
+  /** Only available while you have a health condition (treatments). */
+  requiresCondition?: boolean;
   /** Which minigame runs instead of a plain timer (see content/minigames). */
   minigame?: "quiz" | "rhythm";
 }

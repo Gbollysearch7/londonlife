@@ -159,6 +159,20 @@ export const CITY_VENUES: VenueDef[] = [
     hours: [9, 19],
     tags: ["style", "social", "earn"],
   },
+  {
+    id: "borough_health",
+    name: "Borough Health Centre",
+    district: "King's Cross",
+    kind: "venue",
+    blurb: "A calm community health centre with a nurse, a small pharmacy and a waiting room full of leaflets. Fictional game health — not medical advice.",
+    opening: "08:00–20:00",
+    access: "Free to see the nurse",
+    npcs: [{ id: "ade", name: "Nurse Ade", role: "Community nurse (NPC)" }],
+    street: { x: 28 },
+    map: [1.35, 0.5],
+    hours: [8, 20],
+    tags: ["care", "free"],
+  },
 ];
 
 const NO_REFUND = "Cancelling ends the activity with no reward; costs already paid are not refunded.";
@@ -287,4 +301,13 @@ export const CITY_ACTIVITIES: ActivityDef[] = [
   { id: "salon_assist", label: "Assist on the floor", description: "Sweep, wash and hand out towels: £15.", location: "crown_and_curl", minutes: 5, costPence: 0, payPence: 1500, needs: { energy: -5, social: 6 }, xp: { skill: "charisma", amount: 6 }, dailyLimit: 3, minEnergy: 15, cancelRule: PAID, event: "side_task_paid", npc: "precious", anchor: "chairs" },
   chat("precious", "Precious", "crown_and_curl", "chairs"),
   toilet("crown_and_curl"),
+
+  // ── Borough Health Centre ──
+  { id: "see_nurse", label: "See the nurse", description: "Free. Nurse Ade checks you over and sends you home to rest. Clears feeling run down.", location: "borough_health", minutes: 10, costPence: 0, needs: { energy: 10, social: 6 }, requiresCondition: true, cancelRule: "Leaving before you're seen means you're still unwell.", event: "treated", npc: "ade", anchor: "consult" },
+  { id: "pharmacy_remedy", label: "Cold remedy from the pharmacy", description: "£6 fictional remedy. Clears feeling run down.", location: "borough_health", minutes: 2, costPence: 600, needs: { energy: 5 }, requiresCondition: true, cancelRule: "Paid at the counter; not refunded.", event: "treated", anchor: "pharmacy" },
+  { id: "health_check", label: "Free wellbeing check", description: "Blood pressure, a chat and a leaflet. Peace of mind.", location: "borough_health", minutes: 5, costPence: 0, needs: { fun: 4, social: 6 }, cooldownMin: 240, cancelRule: NO_REFUND, event: "relaxed", anchor: "consult" },
+  { id: "health_volunteer", label: "Volunteer on reception", description: "Greet patients and make tea.", location: "borough_health", minutes: 10, costPence: 0, needs: { social: 14, energy: -5 }, xp: { skill: "charisma", amount: 12 }, minEnergy: 15, cancelRule: NO_REFUND, event: "practised", eventData: { skill: "charisma" }, anchor: "reception" },
+  { id: "health_water", label: "Glass of water in the waiting room", description: "Sit, sip, breathe.", location: "borough_health", minutes: 2, costPence: 0, needs: { energy: 3, bladder: -6 }, cancelRule: NO_REFUND, event: "relaxed", anchor: "waiting" },
+  chat("ade", "Nurse Ade", "borough_health", "reception"),
+  toilet("borough_health"),
 ];

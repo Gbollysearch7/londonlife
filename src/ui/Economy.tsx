@@ -451,3 +451,47 @@ export function WardrobeApp({ s }: { s: State }) {
     </>
   );
 }
+
+export function FoodApp({ s }: { s: State }) {
+  const run = useGame((x) => x.run);
+  const pending = useGame((x) => x.pending);
+  const d = s.delivery;
+  return (
+    <>
+      <p className="tiny">
+        Delivered to your home in about {d.minutes} minutes for a {money(d.feePence)} fee. Takeaways are eaten at home; ingredients go in your cupboard. Orders can't be cancelled once placed.
+      </p>
+      <ul className={styles.cards}>
+        {d.menu.map((m) => (
+          <li key={m.id} className={styles.card}>
+            <div className={styles.cardTop}>
+              <strong>{m.name}</strong>
+              <span className="chip">{money(m.pricePence)}</span>
+            </div>
+            <p className={styles.actionDesc}>{m.blurb}</p>
+            <span className="tiny">{m.contents.join(" · ")}</span>
+            <button className="btn small" disabled={!!pending || m.pricePence + d.feePence > s.wallet.cashPence} onClick={() => run("OrderDelivery", { menuId: m.id }, "order")}>
+              Order · {money(m.pricePence + d.feePence)}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {d.orders.length > 0 && (
+        <>
+          <h3 className={styles.subhead}>Your orders</h3>
+          <ul className={styles.ledger}>
+            {d.orders.map((o) => (
+              <li key={o.id}>
+                <div>
+                  <strong>{o.name}</strong>
+                  <span className="tiny">{o.status === "pending" ? `Arriving ${when(o.deliverAt)}` : "Delivered home"}</span>
+                </div>
+                <span className={`chip ${o.status === "pending" ? "gold" : "good"}`}>{o.status === "pending" ? "On its way" : "Delivered"}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </>
+  );
+}

@@ -89,6 +89,11 @@ const BY_ID: Record<string, Visual> = {
   salon_gossip: { pose: "sit", particles: "chat", seated: true },
   salon_nails: { pose: "sit", particles: "sparkle", seated: true },
   salon_assist: { pose: "work" },
+  see_nurse: { pose: "talk", particles: "hearts" },
+  pharmacy_remedy: { pose: "snack", prop: "cup" },
+  health_check: { pose: "talk" },
+  health_volunteer: { pose: "work", particles: "chat" },
+  health_water: { pose: "sit", seated: true },
 };
 
 export function visualFor(activityId: string): Visual {
