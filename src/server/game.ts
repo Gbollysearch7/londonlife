@@ -19,6 +19,7 @@ import { wardrobeView } from "./wardrobe";
 import { conditionClearsAt, conditionDecay, healthView, setCondition, settleDeliveries, settleHealth } from "./health";
 import { classAttended, classBlocker, classesToday, courseRows, coursesView, type CourseRow } from "./courses";
 import { moodletForActivity, perkEffects } from "@/content/goals";
+import { socialView } from "./social";
 
 // ───────────────────────────── rows ─────────────────────────────
 
@@ -940,6 +941,7 @@ export async function loadState(tx: Tx, accountId: string, now: Date) {
     wardrobe: await wardrobeView(tx, c),
     ...(await healthView(tx, c)),
     ...(await economyView(tx, c, now)),
+    ...(await socialView(tx, c, now)),
     groceryItems: ITEMS.filter((i) => i.kind === "grocery"),
   };
   out.character.ambition.progress = goals.ambition.progress;

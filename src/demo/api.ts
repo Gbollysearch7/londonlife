@@ -3,7 +3,7 @@
  * directly against the in-browser database instead of over HTTP.
  */
 import type { GameState } from "@/server/game";
-import { loadStateFor, runCommand } from "@/server/commands";
+import { loadStateFor, runCommand, socialQueryFor } from "@/server/commands";
 import { GameError } from "./db";
 import { localAccountId, resetSave, saveNow } from "./boot";
 
@@ -46,6 +46,15 @@ export async function sendCommand(type: string, payload: unknown = {}) {
     const state = await loadStateFor(localAccountId());
     void saveNow();
     return wire({ ...result, state }) as { receipt: { message?: string; result?: unknown }; replayed: boolean; state: GameState };
+  } catch (err) {
+    throw toApiError(err);
+  }
+}
+
+export async function fetchSocial<T = Record<string, unknown>>(op: string, params: Record<string, string | number | undefined> = {}): Promise<T> {
+  try {
+    const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]));
+    return wire({ ok: true, ...(await socialQueryFor(localAccountId(), op, clean)) }) as T;
   } catch (err) {
     throw toApiError(err);
   }
