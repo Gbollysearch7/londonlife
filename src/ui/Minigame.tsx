@@ -5,6 +5,7 @@ import type { State } from "@/client/api";
 import { scheduleSong, sfx } from "@/client/sound";
 import { money } from "./format";
 import styles from "./minigame.module.css";
+import { FocusScope } from "./a11y";
 
 type Run = NonNullable<State["minigame"]>;
 
@@ -416,15 +417,18 @@ export function MinigameOverlay({ s }: { s: State }) {
   }, [active, runId]);
   if (result)
     return (
-      <div className={styles.overlay} role="dialog" aria-label="Results">
+      <FocusScope trap>
+      <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Results">
         <div className={styles.panel}>
           <Results r={result} onClose={() => setResult(null)} />
         </div>
       </div>
+      </FocusScope>
     );
   if (!active) return null;
   return (
-    <div className={styles.overlay} role="dialog" aria-label={active.title}>
+    <FocusScope trap focusKey={active.id}>
+    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label={active.title}>
       <div className={styles.panel}>
         <LeaveButton onLeave={() => run("CancelActivity", {}, "cancel")} />
         {active.kind === "quiz" ? (
@@ -434,5 +438,6 @@ export function MinigameOverlay({ s }: { s: State }) {
         )}
       </div>
     </div>
+    </FocusScope>
   );
 }

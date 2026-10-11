@@ -57,3 +57,10 @@ Key guarantees, each covered by tests:
 ## Deploying
 
 Not deployed yet. Any Node host plus a managed Postgres works: set `DATABASE_URL`, run `npm run db:migrate`, `npm run build`, `npm start`. Public release waits for owner review (spec ch. 38).
+
+### Operations
+
+- **Health:** `GET /api/health` returns `200` when the database answers and every migration is applied, `503` otherwise, with migration names and counts only (no secrets). `?deep=1` also checks every character's cash against the ledger; in production that needs the `x-health-token` header to match `HEALTH_TOKEN`.
+- **Backup:** `DATABASE_URL=… npx tsx scripts/backup.ts [file.json]` writes a logical JSON export of every game table (dependency order, exact Postgres text values, sequences). Sessions, reset links and sign-in throttle rows are deliberately left out.
+- **Restore:** `DATABASE_URL=… npx tsx scripts/restore.ts file.json [--replace]` migrates the target, refuses if its migrations differ from the backup's, refuses a non-empty target unless `--replace`, restores in one transaction and checks the ledger. Players sign in again afterwards. The round trip is covered by `tests/integration/backup.test.ts`.
+- **Password reset:** no email service is approved yet. In development the reset link is printed to the server log; in production nothing secret is logged and no link is sent until an email provider is wired into `deliverResetLink` (`src/server/recovery.ts`). Links are hashed, single-use and expire after 30 minutes; requests, link use, failed sign-ins and password changes are rate-limited.

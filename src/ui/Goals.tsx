@@ -4,6 +4,7 @@ import { useGame } from "@/client/store";
 import type { State } from "@/client/api";
 import { money } from "./format";
 import styles from "./ui.module.css";
+import { FocusScope } from "./a11y";
 
 /** Daily check-in prompt, shown once per London day until claimed or dismissed. */
 export function CheckInModal({ s }: { s: State }) {
@@ -33,7 +34,8 @@ export function CheckInModal({ s }: { s: State }) {
     setHidden(true);
   };
   return (
-    <div className={styles.modalScrim} role="dialog" aria-label="Daily check-in">
+    <FocusScope trap>
+    <div className={styles.modalScrim} role="dialog" aria-modal="true" aria-label="Daily check-in">
       <div className={styles.modal}>
         <span className={styles.kickerGold}>Daily check-in</span>
         <h2>Welcome back to London</h2>
@@ -64,6 +66,7 @@ export function CheckInModal({ s }: { s: State }) {
         </div>
       </div>
     </div>
+    </FocusScope>
   );
 }
 
