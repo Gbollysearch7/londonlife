@@ -101,9 +101,16 @@ Goal: turn the slice into a game that is fun to play for days — a living, walk
 - Performance on real phones is unmeasured; scenes are light (one canvas, a few point lights) but untested on devices.
 - Other players: everything is single-player. NPCs are always labelled; no simulated user is presented as a player.
 
-## Milestones 3–5
+## Milestones 3–5 — built in parallel workstreams (2026-10-11/12)
 
-Unchanged from spec chapter 38. Milestone 3 (shared life: presence, chat, consent-based relationships, visits, player jobs, companies) needs a realtime server and two or more real accounts to validate; Milestone 4 adds friendly real-time games and civic systems; Milestone 5 the late-game economy. None of these are started, and none are faked.
+Twelve workstreams were built by parallel agents in isolated branches, merged, reviewed adversarially (11 confirmed bugs fixed with regression tests) and verified: 490 unit/integration tests, two e2e routes and the production build pass. Multi-player features are tested with two or more real accounts.
+
+| Milestone | Built | Not built / limits |
+|---|---|---|
+| M2 (finish) | All 35 venues; energy/water bills and outages (newcomer fortnight protected); cleaner and chef; skill rust used by every gate; house parties; balance simulation (`scripts/simulate.ts`, `docs/BALANCE.md`) | Venue events are hour windows (no seat capacity or ticket classes) |
+| M3 shared life | Presence, profiles, messages (idempotent, block, report), friend requests with consent, gifts and money requests, home visits, rankings, city feed; dating and partners with consent; households with guest permissions; visit and party invitations (8-guest cap); player marketplace; companies with daily settlement; player jobs with escrow | Polling, not push realtime; party guests aren't rendered in the host's 3D scene; one partner per person; no children/marriage |
+| M4 games and civic | Four in a Row and Draughts (server-validated, spectating, rematches, practice vs labelled NPC), weekly ladder and hall of fame, live table in the pub; weekly mayoral elections with enforced policies | Police, court and game crime await the open product decision; no free-text campaign promises |
+| M5 late game | Vehicles (cycle/drive journeys, upkeep, condition), insurance with weekly hazards and hardship relief, pets, prestige furniture; investment homes, land plots and staged construction; courier company with contracts; preset-template billboards; password reset, sign out everywhere, health endpoint, JSON backup/restore, graphics quality setting, accessible hotspot list | Flights/intercity travel not implemented; no real email (dev-only reset links); device performance still unmeasured |
 
 ## Feature-status matrix
 
