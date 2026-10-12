@@ -114,8 +114,9 @@ describe("D · careers and shifts", () => {
     const t0 = await atOffice(acc, MON);
     await pool().query(
       `INSERT INTO shifts (id, character_id, career_id, rank, grade, salary_pence, location, status, started_at, ends_at, settled_at, period_key, week_key, styles, tasks, gross_pence)
-       SELECT gen_random_uuid(), id, 'tech', 1, 1, 40000, 'city_office', 'completed', now(), now(), now(), '2026-10-05', $1, '[]', '[]', 40000 FROM characters`,
-      ["2026-W42"],
+       SELECT gen_random_uuid(), id, 'tech', 1, 1, 40000, 'city_office', 'completed', $2, $2, $2, '2026-10-05', $1, '[]', '[]', 40000 FROM characters`,
+      // A fixed earlier time (not the real clock), so this shift always sorts before the one under test.
+      ["2026-W42", new Date(MON.getTime() - 3_600_000)],
     );
     await cmd(acc, "StartShift", {}, t0);
     const s = await state(acc, minutes(t0, 61));

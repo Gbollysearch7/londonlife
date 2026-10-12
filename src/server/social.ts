@@ -65,7 +65,7 @@ async function blockBetween(tx: Tx, x: string, y: string) {
   return { iBlocked: r.rows.some((b) => b.blocker_id === x), theyBlocked: r.rows.some((b) => b.blocker_id === y) };
 }
 
-async function requireNoBlock(tx: Tx, me: string, other: string) {
+export async function requireNoBlock(tx: Tx, me: string, other: string) {
   const b = await blockBetween(tx, me, other);
   if (b.iBlocked) throw new GameError("blocked", "You've blocked this player. Unblock them first.");
   // Deliberately vague: being blocked is not announced.
@@ -84,7 +84,7 @@ async function requireFriend(tx: Tx, me: CharRow, other: Other) {
 }
 
 /** Locks two characters in a fixed order so two players acting on each other at once can't deadlock. */
-async function lockPair(tx: Tx, accountId: string, otherId: string) {
+export async function lockPair(tx: Tx, accountId: string, otherId: string) {
   const mine = await tx.query("SELECT id FROM characters WHERE account_id = $1", [accountId]);
   if (!mine.rowCount) throw new GameError("no_character", "Create your character first.", 409);
   if (UUID.test(String(otherId))) await tx.query("SELECT id FROM characters WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE", [[mine.rows[0].id, otherId]]);
@@ -919,4 +919,9 @@ export async function socialView(tx: Tx, c: CharRow, now: Date) {
       reportReasons: REPORT_REASONS.map((r) => ({ ...r })),
     },
   };
+}
+
+/** Leaving to do something else (travel, an activity, a shift) ends any home visit you're on. */
+export async function endGuestVisit(tx: Tx, charId: string, now: Date) {
+  await tx.query("UPDATE home_visits SET ended_at = LEAST($2, ends_at) WHERE guest_id = $1 AND ended_at IS NULL", [charId, now]);
 }

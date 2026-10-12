@@ -6,6 +6,7 @@ import { applyEffects } from "@/sim/needs";
 import { applyShift, londonWeekKey, londonWeekday, planTasks, shiftOutcome, wageTax, type ShiftTask, type StyleMark } from "@/sim/shift";
 import { durationMs, londonDayKey, londonHour } from "@/sim/time";
 import { GameError, type Tx } from "./db";
+import { endGuestVisit } from "./social";
 import { perkEffects } from "@/content/goals";
 import { CERT_PERF_BONUS, certifiedCareers } from "./courses";
 import { effectiveLevels } from "./skills";
@@ -115,6 +116,7 @@ export async function startShift(tx: Tx, accountId: string, _p: unknown, now: Da
       JSON.stringify(planTasks(career, id, now, msPerMinute)),
     ],
   );
+  await endGuestVisit(tx, c.id, now);
   return { message: `Shift started: ${roleTitle(career, prog.rank, prog.grade)}, ${fmtMoney(salary)} for a full shift.` };
 }
 

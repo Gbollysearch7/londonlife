@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { JOB_TEMPLATES, PLAYER_JOBS, jobTemplate } from "@/content/market";
 import { GameError, type Tx } from "./db";
+import { lockPair, requireNoBlock } from "./social";
 import { emit, fmtMoney, moveMoney, requireCharacter, settle, type CharRow } from "./game";
 
 /**
@@ -116,6 +117,8 @@ export async function applyJob(tx: Tx, accountId: string, p: { jobId: string }, 
   await settle(tx, c, now);
   const job = await jobFor(tx, p.jobId);
   if (job.poster_id === c.id) throw new GameError("own_job", "You can't take your own job.");
+  // Blocks stop new contact both ways (worded vaguely when you're the one blocked).
+  await requireNoBlock(tx, c.id, job.poster_id);
   open(job, now);
   if (job.status !== "posted") throw new GameError("taken", "Someone has already offered to do that job.");
   const mine = Number((await tx.query("SELECT count(*) AS n FROM player_jobs WHERE worker_id = $1 AND status IN ('applied','hired','submitted')", [c.id])).rows[0].n);
@@ -166,6 +169,9 @@ export async function submitJob(tx: Tx, accountId: string, p: { jobId: string },
 }
 
 export async function completeJob(tx: Tx, accountId: string, p: { jobId: string }, now: Date) {
+  // Lock poster and worker in a fixed (id) order so opposite approvals can't deadlock.
+  const pre = /^[0-9a-f-]{36}$/i.test(String(p.jobId)) ? (await tx.query("SELECT worker_id FROM player_jobs WHERE id = $1", [p.jobId])).rows[0] : null;
+  if (pre?.worker_id) await lockPair(tx, accountId, pre.worker_id);
   const c = await requireCharacter(tx, accountId);
   await settle(tx, c, now);
   const peek = await jobFor(tx, p.jobId, false);
@@ -207,7 +213,7 @@ export async function playerJobsView(tx: Tx, c: CharRow, now: Date) {
   });
   const base = `SELECT j.*, p.name AS poster_name, w.name AS worker_name FROM player_jobs j
     JOIN characters p ON p.id = j.poster_id LEFT JOIN characters w ON w.id = j.worker_id`;
-  const board = (await tx.query(`${base} WHERE j.status = 'posted' AND j.deadline_at > $2 AND j.poster_id <> $1 ORDER BY j.created_at DESC LIMIT 30`, [c.id, now])).rows.map(map);
+  const board = (await tx.query(`${base} WHERE j.status = 'posted' AND j.deadline_at > $2 AND j.poster_id <> $1 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id = $1 AND b.blocked_id = j.poster_id) OR (b.blocker_id = j.poster_id AND b.blocked_id = $1)) ORDER BY j.created_at DESC LIMIT 30`, [c.id, now])).rows.map(map);
   const posted = (await tx.query(`${base} WHERE j.poster_id = $1 ORDER BY (j.status IN ('posted','applied','hired','submitted')) DESC, j.created_at DESC LIMIT 15`, [c.id])).rows.map(map);
   const working = (await tx.query(`${base} WHERE j.worker_id = $1 ORDER BY (j.status IN ('applied','hired','submitted')) DESC, j.created_at DESC LIMIT 15`, [c.id])).rows.map(map);
   const held = Number((await tx.query("SELECT COALESCE(SUM(amount_pence),0) AS s FROM escrow_holds WHERE payer_id = $1 AND status = 'held'", [c.id])).rows[0].s);

@@ -2,6 +2,9 @@ import crypto from "node:crypto";
 import { furnitureDef } from "@/content/catalogue";
 import { MARKET, marketFee } from "@/content/market";
 import { GameError, type Tx } from "./db";
+import { lockPair } from "./social";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { emit, fmtMoney, moveMoney, requireCharacter, settle, type CharRow } from "./game";
 import { companyView, settleCompany } from "./company";
 import { lockOtherCharacter, playerJobsView, settleOwnJobs } from "./playerJobs";
@@ -61,6 +64,9 @@ export async function cancelListing(tx: Tx, accountId: string, p: { listingId: s
  * and the furniture instance moves to the buyer's storage. The listing row lock means it can sell once.
  */
 export async function buyListing(tx: Tx, accountId: string, p: { listingId: string }, now: Date) {
+  // Lock buyer and seller in a fixed (id) order so two opposite purchases can't deadlock.
+  const pre = (await tx.query("SELECT seller_id FROM market_listings WHERE id = $1", [UUID_RE.test(String(p.listingId)) ? p.listingId : null])).rows[0];
+  if (pre) await lockPair(tx, accountId, pre.seller_id);
   const buyer = await requireCharacter(tx, accountId);
   await settle(tx, buyer, now);
   const peek = (await tx.query("SELECT seller_id FROM market_listings WHERE id = $1", [p.listingId])).rows[0];

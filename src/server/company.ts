@@ -3,6 +3,7 @@ import { levelForXp } from "@/sim/progression";
 import { londonWeekKey } from "@/sim/shift";
 import { londonDayKey, londonInstant } from "@/sim/time";
 import { GameError, type Tx } from "./db";
+import { effectiveLevel } from "./skills";
 import { emit, fmtMoney, moveMoney, requireCharacter, settle, type CharRow } from "./game";
 
 const nextDay = (day: string, n = 1) => {
@@ -23,8 +24,9 @@ function lastClosedPeriod(at: Date) {
   return at.getTime() >= londonInstant(day, COMPANY.settleHour).getTime() ? day : nextDay(day, -1);
 }
 
-async function enterpriseLevel(tx: Tx, charId: string) {
-  return levelForXp(Number((await tx.query("SELECT xp FROM skills WHERE character_id = $1 AND skill_id = 'enterprise'", [charId])).rows[0]?.xp ?? 0));
+/** Enterprise as used for gating: the effective level after skill rust, like every other gate. */
+async function enterpriseLevel(tx: Tx, charId: string, now: Date) {
+  return effectiveLevel(tx, charId, "enterprise", now);
 }
 
 export async function hasCompany(tx: Tx, charId: string) {
@@ -43,7 +45,7 @@ export async function foundCompany(tx: Tx, accountId: string, p: { name: string;
   const sector = sectorDef(p.sector);
   if (!sector) throw new GameError("bad_sector", "Choose a sector.");
   if (await hasCompany(tx, c.id)) throw new GameError("has_company", "You already run a company. One per person.");
-  const e = await enterpriseLevel(tx, c.id);
+  const e = await enterpriseLevel(tx, c.id, now);
   if (e < COMPANY.minEnterprise) throw new GameError("needs_enterprise", `Founding a company needs Enterprise level ${COMPANY.minEnterprise}; you're level ${e}.`);
   const ins = await tx.query(
     `INSERT INTO companies (character_id, name, sector, settled_through, founded_at) VALUES ($1,$2,$3,$4,$5)
@@ -105,7 +107,7 @@ export async function settleCompany(tx: Tx, c: CharRow, now: Date): Promise<stri
   const earliest = nextDay(target, -(COMPANY.maxCatchUpDays - 1));
   if (start < earliest) start = earliest;
   const sector = sectorDef(co.sector)!;
-  const enterprise = await enterpriseLevel(tx, c.id);
+  const enterprise = await enterpriseLevel(tx, c.id, now);
   const notices: string[] = [];
   for (let d = start; d <= target; d = nextDay(d)) {
     const at = londonInstant(d, COMPANY.settleHour);
@@ -154,7 +156,7 @@ export async function settleCompany(tx: Tx, c: CharRow, now: Date): Promise<stri
 }
 
 export async function companyView(tx: Tx, c: CharRow, now: Date) {
-  const enterprise = await enterpriseLevel(tx, c.id);
+  const enterprise = await enterpriseLevel(tx, c.id, now);
   const co = (await tx.query("SELECT * FROM companies WHERE character_id = $1", [c.id])).rows[0];
   const base = {
     minEnterprise: COMPANY.minEnterprise,

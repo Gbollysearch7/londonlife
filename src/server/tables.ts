@@ -5,6 +5,7 @@ import { TABLE_GAME_LIST, draughtsHints, tableGame, type MoveRecord, type TableG
 import { hourLabel, isOpenAt, venue } from "@/content/world";
 import { londonHour } from "@/sim/time";
 import { GameError, type Tx } from "./db";
+import { requireNoBlock } from "./social";
 import { emit, requireCharacter, settle, type CharRow } from "./game";
 import { recordLadder } from "./ladder";
 
@@ -222,6 +223,7 @@ export async function joinGameTable(tx: Tx, accountId: string, p: { tableId: str
   if (t.seat_a === c.id) throw new GameError("own_table", "That's your table — wait for someone to join.");
   if (t.status !== "open" || t.seat_b) throw new GameError("table_full", t.status === "cancelled" ? "That table has closed." : "Someone else got that seat.");
   if (t.reserved_for && t.reserved_for !== c.id) throw new GameError("reserved", "That rematch is waiting for someone else.");
+  await requireNoBlock(tx, c.id, t.seat_a);
   if (busy) throw busyError(busy);
   // A rematch is accepted wherever the two of you are; a new table needs you at the venue.
   if (!t.rematch_of) await requireAtTableVenue(tx, c, t.venue, now);
@@ -305,17 +307,26 @@ export async function rematch(tx: Tx, accountId: string, p: { tableId: string },
   }
   if (t.rematch_id) {
     const next = await lockTable(tx, t.rematch_id);
-    if (next.seat_a === c.id) throw new GameError("asked", "Rematch offered — waiting for them to accept.");
-    return joinGameTable(tx, accountId, { tableId: next.id }, now);
+    await settleTable(tx, next, now);
+    if (next.status === "open") {
+      if (next.seat_a === c.id) throw new GameError("asked", "Rematch offered — waiting for them to accept.");
+      return joinGameTable(tx, accountId, { tableId: next.id }, now);
+    }
+    if (next.status !== "cancelled") throw new GameError("rematch_started", "That rematch has already started.");
+    // The earlier offer expired or was closed: release it so a fresh rematch can be offered.
+    await tx.query("UPDATE game_tables SET rematch_of = NULL WHERE id = $1", [next.id]);
+    t.rematch_id = null;
   }
   if (busy) throw busyError(busy);
   const opponent = seat === "a" ? t.seat_b! : t.seat_a;
+  // With no moves recorded, the turn never changed, so it still names who was due to start.
+  const firstMover = (t.moves[0]?.seat ?? t.turn) as Seat;
   const id = crypto.randomUUID();
   await tx.query(
     `INSERT INTO game_tables (id, game, mode, venue, status, seat_a, reserved_for, board, turn, open_until, rematch_of, created_at)
      VALUES ($1,$2,'friendly',$3,'open',$4,$5,$6,$7,$8,$9,$10)`,
-    // The new table's seat "a" is you; if you moved first last time, they move first now.
-    [id, t.game, t.venue, c.id, opponent, rulesOf(t).emptyBoard(), seat === "a" ? "b" : "a", new Date(now.getTime() + OPEN_MS), t.id, now],
+    // The new table's seat "a" is you; whoever actually moved first last time goes second now.
+    [id, t.game, t.venue, c.id, opponent, rulesOf(t).emptyBoard(), firstMover === seat ? "b" : "a", new Date(now.getTime() + OPEN_MS), t.id, now],
   );
   t.rematch_id = id;
   t.version += 1;
@@ -389,6 +400,7 @@ export async function gamesView(tx: Tx, c: CharRow, now: Date) {
   const open = (
     await tx.query(
       `SELECT * FROM game_tables WHERE status = 'open' AND mode = 'friendly' AND open_until > $1 AND seat_a <> $2 AND (reserved_for IS NULL OR reserved_for = $2)
+       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id = $2 AND b.blocked_id = seat_a) OR (b.blocker_id = seat_a AND b.blocked_id = $2))
        ORDER BY created_at DESC LIMIT 12`,
       [now, c.id],
     )

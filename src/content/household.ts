@@ -45,7 +45,7 @@ export const OUTAGE_KINDS = {
   power: {
     name: "Power cut",
     blurb: "A fictional fault on the street has cut the electricity.",
-    blocks: ["tv", "desk"],
+    blocks: ["tv", "desk", "cinema", "workstation", "speakers"],
     recovery: "The gas hob still works, so you can cook. The Reading Room and The Common Room have lights and computers.",
   },
 } as const;

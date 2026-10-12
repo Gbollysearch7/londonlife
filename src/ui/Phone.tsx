@@ -59,21 +59,11 @@ const LIVE: { id: PhoneApp | "travel" | "help" | "settings"; name: string; icon:
   { id: "settings", name: "Settings", icon: "⚙" },
 ];
 
+// Only what genuinely isn't built. Game crime (police and court) waits on an open product decision.
 const LATER: { name: string; when: string }[] = [
-  { name: "Vehicles", when: "Milestone 5" },
-  { name: "Staff", when: "Milestone 2 (next)" },
-  { name: "Messages", when: "Milestone 3" },
-  { name: "Contacts", when: "Milestone 3" },
-  { name: "Player work", when: "Milestone 3" },
-  { name: "Company", when: "Milestone 3" },
-  { name: "Rankings", when: "Milestone 3" },
-  { name: "Shops", when: "Milestone 3" },
-  { name: "Games", when: "Milestone 4" },
-  { name: "Government", when: "Milestone 4" },
-  { name: "City feed", when: "Milestone 3" },
-  { name: "Police", when: "Milestone 4" },
-  { name: "Court", when: "Milestone 4" },
-];
+  { name: "Police", when: "Awaiting decision" },
+  { name: "Court", when: "Awaiting decision" },
+].filter((l) => !LIVE.some((a) => a.name === l.name));
 
 const TITLES: Record<string, string> = {
   home: "Phone",

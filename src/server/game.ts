@@ -22,7 +22,7 @@ import { classAttended, classBlocker, classesToday, courseRows, coursesView, typ
 import { moodletForActivity, perkEffects } from "@/content/goals";
 import { effectiveLevels, skillRust } from "./skills";
 import { householdBlocker, householdMood, householdView, partyCompleted, settleHousehold } from "./household";
-import { socialView } from "./social";
+import { endGuestVisit, socialView } from "./social";
 import { companyWorked, hasCompany } from "./company";
 import { isListed, marketView, settleShared } from "./market";
 import { policyActivityCost, policyGroceryPrice, policyQuote, policyVenue, type PolicyId } from "@/content/civic";
@@ -589,6 +589,7 @@ export async function startActivity(tx: Tx, accountId: string, p: { activityId: 
     [id, c.id, def.id, c.location, now, new Date(now.getTime() + ms), cost, londonDayKey(now)],
   );
   if (def.minigame) await createRun(tx, c, id, def, now, new Date(now.getTime() + ms));
+  await endGuestVisit(tx, c.id, now);
   return { message: def.minigame ? `${def.label}: get ready!` : `${def.label} started.` };
 }
 
@@ -627,6 +628,7 @@ export async function startJourney(tx: Tx, accountId: string, p: { destination: 
     [id, c.id, c.location, p.destination, p.mode, q.farePence, now, new Date(now.getTime() + durationMs(q.minutes))],
   );
   await garage.use(tx, p.mode, id, c.location);
+  await endGuestVisit(tx, c.id, now);
   const how = { walk: "Walking", bus: "On the bus", tube: "On the Tube", taxi: "In a taxi", cycle: "Cycling", drive: "Driving" }[p.mode];
   return { message: `${how} to ${venue(p.destination)!.name}.` };
 }

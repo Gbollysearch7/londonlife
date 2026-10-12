@@ -82,6 +82,9 @@ export async function castVote(tx: Tx, accountId: string, p: { candidateId: stri
   await settle(tx, c, now);
   const why = eligibility(c, now) ?? pollingBlocker(c);
   if (why) throw new GameError("cannot_vote", why);
+  // In person means actually there: someone who has set off elsewhere can't vote from the journey.
+  const moving = await tx.query("SELECT 1 FROM journeys WHERE character_id = $1 AND status = 'in_transit'", [c.id]);
+  if (moving.rowCount && venue(ELECTION.pollingVenue)) throw new GameError("cannot_vote", "You're on your way somewhere. Votes are cast in person.");
   const key = raceKeyAt(now);
   await lockRace(tx, key);
   if ((await tx.query("SELECT 1 FROM civic_terms WHERE race_key = $1", [key])).rowCount) throw new GameError("closed", "That race has closed.");

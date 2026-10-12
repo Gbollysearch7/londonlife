@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { STORIES, TREASURE_SPOTS, choiceChance, storyDef, storyLayout, storyNode, treasureReward, type StoryChoice } from "@/content/stories";
 import type { SkillId } from "@/content/types";
 import { isOpenAt, venue } from "@/content/world";
+import { policyVenue } from "@/content/civic";
 import { applyEffects } from "@/sim/needs";
 import { seededRandom } from "@/sim/shift";
 import { londonDayKey, londonHour } from "@/sim/time";
@@ -189,7 +190,8 @@ export async function claimTreasure(tx: Tx, accountId: string, _p: unknown, now:
   if (ctx.journey) throw new GameError("travelling", "Wait until you arrive.");
   if (c.location !== spot.venue) throw new GameError("wrong_place", "There's no treasure here today. Read the clue again.");
   const v = venue(spot.venue)!;
-  if (!isOpenAt(v, londonHour(now))) throw new GameError("closed", `${v.name} is closed right now.`);
+  // Same opening rule as everywhere else, including any city policy that extends hours.
+  if (!isOpenAt(policyVenue(ctx.policy, v), londonHour(now))) throw new GameError("closed", `${v.name} is closed right now.`);
   await tx.query("INSERT INTO treasure_days (day) VALUES ($1) ON CONFLICT DO NOTHING", [day]);
   // Locking the day row serialises claims, so ranks are unique and in order.
   const counter = (await tx.query("SELECT claims FROM treasure_days WHERE day = $1 FOR UPDATE", [day])).rows[0];
