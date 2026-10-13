@@ -10,9 +10,10 @@ import styles from "./demo.module.css";
 import { useGame } from "@/client/store";
 import { useScene } from "@/world/sceneStore";
 import { useFx } from "@/client/fx";
+import { useControls } from "@/world/controls";
 
 // Automation hook for the test build only: lets browser tests open in-world menus without pixel hunting.
-(window as unknown as Record<string, unknown>).__ll = { game: useGame, scene: useScene, fx: useFx };
+(window as unknown as Record<string, unknown>).__ll = { game: useGame, scene: useScene, fx: useFx, controls: useControls };
 
 type View = "loading" | "gate" | "create" | "reveal" | "play" | "error";
 

@@ -13,6 +13,7 @@ import { useFx } from "@/client/fx";
 import { TextLabel } from "./TextLabel";
 import type { Lighting } from "./lighting";
 import PlayerAvatar, { type Goal } from "./PlayerAvatar";
+import { FollowCamera, ProximityWatcher, type Interactable } from "./FollowControls";
 import { shiftVisual, visualFor } from "./activityVisuals";
 import { standingVariant } from "./poses";
 import { HotspotMarker, SceneLights, SkyDome, TapRipple, WalkPlane } from "./sceneParts";
@@ -146,6 +147,34 @@ export default function VenueScene({ state, light }: { state: State; light: Ligh
 
   const mood = state.mood.score >= 65 ? "happy" : state.mood.score < 40 ? "sad" : "neutral";
 
+  // Everything you can walk up to and use with E (or the on-screen button).
+  const interactables: Interactable[] = [];
+  for (const n of layout.npcs) {
+    const meta = venue(loc)?.npcs.find((x) => x.id === n.id);
+    interactables.push({
+      id: `npc:${n.id}`,
+      label: `Talk to ${meta?.name ?? n.id}`,
+      pos: n.pos,
+      open: () => openHotspot({ id: `npc:${n.id}`, title: meta?.name ?? n.id, subtitle: meta?.role, position: [n.pos[0], 0, n.pos[1]], actionIds: state.actions.filter((a) => a.npc === n.id).map((a) => a.id) }),
+    });
+  }
+  for (const [id, a] of Object.entries(layout.anchors)) {
+    if (!a.label) continue;
+    const actionIds = anchorActions[id] ?? [];
+    if (!actionIds.length && id !== "exit" && id !== "groceries" && id !== "chairs") continue;
+    interactables.push({
+      id: `anchor:${id}`,
+      label: id === "exit" ? "Leave" : a.label,
+      pos: a.approach ?? a.pos,
+      open: () => openHotspot({ id: `anchor:${id}`, title: a.label!, position: [a.pos[0], 0, a.pos[1]], actionIds }),
+    });
+  }
+  if (state.treasure.anchor && layout.anchors[state.treasure.anchor]) {
+    const a = layout.anchors[state.treasure.anchor];
+    const p = a.approach ?? a.pos;
+    interactables.push({ id: "treasure", label: "Pick up the sparkling gem", pos: [p[0] + 0.6, p[1] + 0.4], open: () => void useGame.getState().run("ClaimTreasure", {}, "treasure") });
+  }
+
   return (
     <>
       <SkyDome light={light} />
@@ -216,7 +245,9 @@ export default function VenueScene({ state, light }: { state: State; light: Ligh
       <FloatingTexts target={player} />
       <CelebrationBurst target={player} />
       <ContactShadows position={[0, 0.006, 0]} opacity={0.32} scale={Math.max(w, d) * 1.4} blur={2.4} far={3} resolution={512} />
-      <OrbitControls target={layout.camera.target} enablePan={false} minDistance={7} maxDistance={24} minPolarAngle={0.55} maxPolarAngle={1.2} minAzimuthAngle={-0.6} maxAzimuthAngle={1.0} enableDamping />
+      <ProximityWatcher items={busy ? [] : interactables} />
+      <FollowCamera base={layout.camera.target} pull={0.7} />
+      <OrbitControls makeDefault target={layout.camera.target} enablePan={false} minDistance={7} maxDistance={24} minPolarAngle={0.55} maxPolarAngle={1.2} minAzimuthAngle={-0.6} maxAzimuthAngle={1.0} enableDamping />
     </>
   );
 }

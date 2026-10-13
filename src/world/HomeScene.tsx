@@ -8,7 +8,8 @@ import { useGame, type Placement } from "@/client/store";
 import { footprint, placementError, type Placed } from "@/sim/placement";
 import { CelebrationBurst, FloatingTexts } from "./effects";
 import { FurnitureModel } from "./furnitureModels";
-import { cellCentre, furnitureActionIds, homeGrid, homeSpot } from "./homeAnchors";
+import { cellCentre, furnitureActionIds, homeGrid, homeSpot, spotAt } from "./homeAnchors";
+import { FollowCamera, ProximityWatcher, type Interactable } from "./FollowControls";
 import type { Lighting } from "./lighting";
 import PlayerAvatar, { type Goal } from "./PlayerAvatar";
 import { HotspotMarker, SceneLights, SkyDome, TapRipple, WalkPlane } from "./sceneParts";
@@ -207,6 +208,26 @@ export default function HomeScene({ state, light }: { state: State; light: Light
   const dist = Math.max(gridW, gridD);
   const mood = state.mood.score >= 65 ? "happy" : state.mood.score < 40 ? "sad" : "neutral";
   const door: [number, number] = [-gridW / 2 + 0.45, -0.5];
+
+  // Walk up to furniture (or the door) and press E to use it.
+  const interactables: Interactable[] = [];
+  if (!placement && !state.activity) {
+    for (const p of visible) {
+      const def = furnitureDef(p.defId)!;
+      const actionIds = furnitureActionIds(def.id, state.actions);
+      if (!actionIds.length) continue;
+      const [cx, cz] = cellCentre(p, gridW, gridD);
+      const front = spotAt(p, gridW, gridD, "use").pos;
+      interactables.push({
+        id: p.id,
+        label: `Use the ${def.name.toLowerCase()}`,
+        pos: [(front[0] + cx) / 2, (front[1] + cz) / 2],
+        open: () => openHotspot({ id: p.id, title: def.name, subtitle: def.blurb, position: [cx, 0, cz], actionIds, furnitureId: p.id }),
+      });
+    }
+    interactables.push({ id: "door", label: "Head out into London", pos: door, open: () => setSheet("map") });
+  }
+
   return (
     <>
       <SkyDome light={light} />
@@ -260,7 +281,10 @@ export default function HomeScene({ state, light }: { state: State; light: Light
       <FloatingTexts target={player} />
       <CelebrationBurst target={player} />
       <ContactShadows position={[0, 0.01, 0]} opacity={0.35} scale={dist * 1.5} blur={2} far={3} resolution={512} />
+      <ProximityWatcher items={interactables} reach={1.4} />
+      {!placement && <FollowCamera base={[0, 0.6, 0]} pull={0.45} height={0.6} />}
       <OrbitControls
+        makeDefault
         target={[0, 0.6, 0]}
         enablePan={false}
         enableRotate={!placement}

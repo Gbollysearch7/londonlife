@@ -1,7 +1,8 @@
 "use client";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { useFrame } from "@react-three/fiber";
-import type { Group } from "three";
+import { useFrame, useThree } from "@react-three/fiber";
+import { Vector3, type Group } from "three";
+import { readInput, useControls } from "./controls";
 import type { Appearance } from "@/content/character";
 import { useFx } from "@/client/fx";
 import { sfx } from "@/client/sound";
@@ -63,7 +64,8 @@ const PlayerAvatar = forwardRef<Group, { appearance: Appearance; mood: Mood; out
       y: goal ? goal.y : 0,
       rot: goal ? goal.rotY : spawnRotY,
       path: [] as P2[],
-      phase: (goal ? "act" : "idle") as "idle" | "walk" | "settle" | "act",
+      phase: (goal ? "act" : "idle") as "idle" | "walk" | "settle" | "act" | "drive",
+      running: false,
       goalKey: goal?.key ?? null,
       lastApproach: goal?.approach ?? null as P2 | null,
       stepClock: 0,
@@ -74,6 +76,9 @@ const PlayerAvatar = forwardRef<Group, { appearance: Appearance; mood: Mood; out
     const seenWalk = useRef(walkTarget?.n ?? 0);
     const celebrateUntil = useFx((s) => s.celebrateUntil);
     const [phase, setPhase] = useState(st.current.phase);
+    const [running, setRunning] = useState(false);
+    const { camera } = useThree();
+    const fwd = useRef(new Vector3());
     const [, rerender] = useState(0);
     useEffect(() => {
       const ms = celebrateUntil - Date.now();
@@ -123,7 +128,55 @@ const PlayerAvatar = forwardRef<Group, { appearance: Appearance; mood: Mood; out
     useFrame((_, rawDt) => {
       const dt = Math.min(rawDt, 0.1);
       const s = st.current;
-      if (s.phase === "walk") {
+      // Direct control (keys / joystick) whenever you're free; it overrides any tap-to-walk path.
+      const input = goal ? null : readInput();
+      if (input?.active) {
+        if (s.phase !== "drive") {
+          s.phase = "drive";
+          s.path = [];
+          setPhase("drive");
+        }
+        if (input.run !== s.running) {
+          s.running = input.run;
+          setRunning(input.run);
+        }
+        camera.getWorldDirection(fwd.current);
+        const fx = fwd.current.x;
+        const fz = fwd.current.z;
+        const fl = Math.hypot(fx, fz) || 1;
+        // Camera-relative: up on the stick walks away from the camera.
+        const mx = (fx / fl) * input.y + (-fz / fl) * input.x;
+        const mz = (fz / fl) * input.y + (fx / fl) * input.x;
+        const speed = (input.run ? 3.6 : 2.0) * dt;
+        const [ci, cj] = toCell(grid, s.x, s.z);
+        // Standing inside an obstacle (e.g. just got up from a seat): any step out is allowed.
+        const escaping = isBlocked(grid, ci, cj);
+        const free = (x: number, z: number) => {
+          const ahead = 0.22;
+          const m = Math.hypot(mx, mz) || 1;
+          const [i, j] = toCell(grid, x + (mx / m) * ahead, z + (mz / m) * ahead);
+          const [i2, j2] = toCell(grid, x, z);
+          if (escaping) return i2 >= 0 && j2 >= 0 && i2 < grid.cols && j2 < grid.rows;
+          return !isBlocked(grid, i, j) && !isBlocked(grid, i2, j2);
+        };
+        const nx = s.x + mx * speed;
+        const nz = s.z + mz * speed;
+        // Slide along walls and furniture instead of stopping dead.
+        if (free(nx, nz)) {
+          s.x = nx;
+          s.z = nz;
+        } else if (free(nx, s.z)) s.x = nx;
+        else if (free(s.x, nz)) s.z = nz;
+        s.rot = angleTo(s.rot, Math.atan2(mx, mz), 1 - Math.exp(-dt * 14));
+        s.stepClock += dt;
+        if (s.stepClock > (input.run ? 0.22 : 0.32)) {
+          s.stepClock = 0;
+          sfx("step");
+        }
+      } else if (s.phase === "drive") {
+        s.phase = "idle";
+        setPhase("idle");
+      } else if (s.phase === "walk") {
         const next = s.path[0];
         if (!next) {
           s.phase = goal ? "settle" : "idle";
@@ -183,6 +236,9 @@ const PlayerAvatar = forwardRef<Group, { appearance: Appearance; mood: Mood; out
         s.y = goal.y;
         s.rot = angleTo(s.rot, goal.rotY, 1 - Math.exp(-dt * 9));
       }
+      const pl = useControls.getState().player;
+      pl.x = s.x;
+      pl.z = s.z;
       const g = group.current;
       if (g) {
         g.position.set(s.x, s.y, s.z);
@@ -192,7 +248,7 @@ const PlayerAvatar = forwardRef<Group, { appearance: Appearance; mood: Mood; out
     });
 
     const celebrating = celebrateUntil > Date.now() && phase === "idle";
-    const pose: Pose = phase === "walk" ? "walk" : (phase === "act" || phase === "settle") && goal ? goal.pose : celebrating ? "celebrate" : "idle";
+    const pose: Pose = phase === "drive" ? (running ? "jog" : "walk") : phase === "walk" ? "walk" : (phase === "act" || phase === "settle") && goal ? goal.pose : celebrating ? "celebrate" : "idle";
     const prop = phase === "act" || phase === "settle" ? goal?.prop : undefined;
     const showFx = phase === "act" && goal?.particles;
 

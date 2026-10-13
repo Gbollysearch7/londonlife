@@ -17,6 +17,7 @@ import { ShiftPanel } from "./ShiftPanel";
 import { VisitBar } from "./Social";
 import { HostHomePanel } from "./Family";
 import { SceneDirectory } from "./SceneDirectory";
+import { ControlsHint, InteractPrompt, Joystick, useKeyboardControls } from "./Controls";
 import styles from "./ui.module.css";
 
 const World = dynamic(() => import("@/world/World"), { ssr: false });
@@ -63,6 +64,7 @@ function NextStep({ s }: { s: State }) {
 }
 
 export default function Game() {
+  useKeyboardControls();
   const state = useGame((x) => x.state);
   const loading = useGame((x) => x.loading);
   const offline = useGame((x) => x.offline);
@@ -131,6 +133,9 @@ export default function Game() {
       <MinigameOverlay s={state} />
       <TableOverlay s={state} />
       <CheckInModal s={state} />
+      {!state.journey && <InteractPrompt />}
+      {!state.journey && <Joystick />}
+      <ControlsHint />
       <Toasts />
       <Celebrations />
       {sheet === "actions" && <ActionsSheet s={state} />}
